@@ -1,0 +1,24 @@
+# CCS / TI Clang 构建输出
+Debug/
+Release/
+*.o
+*.obj
+*.d
+*.d_raw
+*.out
+*.map
+*.hex
+*.bin
+*_linkInfo.xml
+
+# SysConfig 构建期生成文件
+device.opt
+device.cmd.genlibs
+device_linker.cmd
+ti_msp_dl_config.c
+ti_msp_dl_config.h
+Event.dot
+
+# 本地测试与编辑器缓存
+Tests/Host/build/
+.clangd/
