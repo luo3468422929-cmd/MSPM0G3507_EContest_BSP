@@ -8,17 +8,10 @@
                 "E:/Desktop/CCS_20.5.0.00028_win/E/TI/ccs2050/ccs/tools/compiler/ti-cgt-armllvm_4.0.4.LTS/include",
                 "${workspaceFolder}",
                 "${workspaceFolder}/Debug",
-                "${workspaceFolder}/App/Inc",
-                "${workspaceFolder}/BSP/Config",
-                "${workspaceFolder}/BSP/Inc",
-                "${workspaceFolder}/Components/Filter",
-                "${workspaceFolder}/Components/PID",
-                "${workspaceFolder}/Components/Protocol",
-                "${workspaceFolder}/Components/RingBuffer",
-                "${workspaceFolder}/Components/SSD1306",
-                "${workspaceFolder}/Components/Track",
-                "${workspaceFolder}/Services/Inc",
-                "${workspaceFolder}/Debug"
+                "${workspaceFolder}/Bsp",
+                "${workspaceFolder}/Hardware",
+                "${workspaceFolder}/Control",
+                "${workspaceFolder}/User"
             ],
             "defines": [
                 "__MSPM0G3507__",

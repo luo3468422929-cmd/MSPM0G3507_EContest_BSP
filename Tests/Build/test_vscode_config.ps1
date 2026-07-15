@@ -8,21 +8,21 @@ $configuration = $document.configurations[0]
 $requiredIncludePaths = @(
     '${workspaceFolder}'
     '${workspaceFolder}/Debug'
-    '${workspaceFolder}/App/Inc'
-    '${workspaceFolder}/BSP/Config'
-    '${workspaceFolder}/BSP/Inc'
-    '${workspaceFolder}/Components/Filter'
-    '${workspaceFolder}/Components/PID'
-    '${workspaceFolder}/Components/Protocol'
-    '${workspaceFolder}/Components/RingBuffer'
-    '${workspaceFolder}/Components/SSD1306'
-    '${workspaceFolder}/Components/Track'
-    '${workspaceFolder}/Services/Inc'
+    '${workspaceFolder}/Bsp'
+    '${workspaceFolder}/Hardware'
+    '${workspaceFolder}/Control'
+    '${workspaceFolder}/User'
 )
 
 foreach ($path in $requiredIncludePaths) {
     if ($configuration.includePath -notcontains $path) {
         throw "VS Code includePath 缺少：$path"
+    }
+}
+
+foreach ($retired in @('/App/'; '/BSP/'; '/Components/'; '/Services/')) {
+    if (($configuration.includePath -join "`n") -match [regex]::Escape($retired)) {
+        throw "VS Code includePath 仍包含旧目录：$retired"
     }
 }
 

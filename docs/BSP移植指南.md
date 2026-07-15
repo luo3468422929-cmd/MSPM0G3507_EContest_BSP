@@ -1,32 +1,13 @@
-# BSP 移植指南
+# 驱动移植规范
 
-## 移植边界
+把开源代码整理进本工程时按下面处理：
 
-比赛现场优先只修改：
+1. 删除开源代码里的 `main()`、全局延时、硬编码 GPIO 和重复的串口初始化。
+2. DriverLib/SysConfig 直接相关的通道放 `Bsp/`；具有明确器件语义的驱动放 `Hardware/`；纯算法放 `Control/`。
+3. 物理引脚只在 `empty.syscfg` 出现，驱动通过 `Bsp/board_pins.h` 使用逻辑别名。
+4. 公共函数命名为 `Module_Init()`、`Module_Update()`、`Module_GetData()`；每个公共入口检查空指针、范围和初始化状态。
+5. ISR 只搬运数据或计数；解析器和算法在 `Task_Run()` 调度中执行。
+6. 在 `User/test.c` 增加一个独立测试入口，再接入 `User/task.c`。
+7. 对纯算法补 `Tests/Host/test_main.c`；对引脚/API 补 `Tests/Build/*.ps1` 静态检查。
 
-1. `empty.syscfg`：引脚和外设实例。
-2. `BSP/Config/bsp_config.h`：宏映射、极性、方向和参数。
-3. `Services/Src/*.c` 中的 PID 默认参数，或比赛应用中的在线参数接口。
-4. `App`：题目状态机。
-
-不要修改 DriverLib、SysConfig 生成文件、PID/滤波/协议算法内部逻辑。
-
-## 迁移现有开源驱动的方法
-
-1. 找出硬件访问代码，将 GPIO、Timer、ADC、UART 操作收进对应 BSP 模块。
-2. 将全局变量改为模块私有 `static` 状态，通过 `GetData()` 返回只读快照。
-3. 从 ISR 中移除 PID、OLED、延时和 `printf()`，只保留数据搬运与计数。
-4. 将 `Car_Move()` 等业务接口拆成 `Motor_SetDutyPair()` 与上层速度服务。
-5. 将 PID 参数和历史误差放进 `PID_t`，不要再创建左右轮专用重复函数。
-6. 将寻迹的 L1/L2 等硬编码变量改为数组、通道数和权重表。
-7. 每迁移一个模块先运行其 ModuleTest，再接入综合 App。
-
-## 极性与方向校准
-
-- 电机正方向错误：修改 `MOTOR_LEFT_REVERSED` 或 `MOTOR_RIGHT_REVERSED`。
-- 编码器正负错误：修改 `ENCODER_LEFT_REVERSED` 或 `ENCODER_RIGHT_REVERSED`。
-- 黑线输出为低：修改 `TRACK_BLACK_IS_HIGH`。
-- LED/按键相反：修改 `LED_ACTIVE_HIGH`、`KEY_ACTIVE_LOW`。
-
-这些调整不需要进入 `.c` 文件。
-
+后续 12 路寻迹应实现新的总线适配器，但继续提供 `Track_Update()`、`Track_GetData()`，这样 `Control/car_control.c` 不需要跟着换协议。

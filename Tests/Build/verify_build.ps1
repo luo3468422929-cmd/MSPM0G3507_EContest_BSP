@@ -1,5 +1,10 @@
 $ErrorActionPreference = 'Stop'
 
+& (Join-Path $PSScriptRoot 'test_target_pinout.ps1')
+& (Join-Path $PSScriptRoot 'test_lcd_api.ps1')
+& (Join-Path $PSScriptRoot 'test_user_api.ps1')
+& (Join-Path $PSScriptRoot 'test_beginner_docs.ps1')
+
 $project = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $sdk = 'C:\TI\mspm0_sdk_2_10_00_04'
 $sysconfig = 'C:\TI\sysconfig_1.26.2\sysconfig_cli.bat'
@@ -22,17 +27,10 @@ if ($LASTEXITCODE -ne 0) { throw "SysConfig failed: $LASTEXITCODE" }
 
 $includeDirs = @(
     $syscfgOutput
-    (Join-Path $project 'BSP\Config')
-    (Join-Path $project 'BSP\Inc')
-    (Join-Path $project 'Components\PID')
-    (Join-Path $project 'Components\Filter')
-    (Join-Path $project 'Components\RingBuffer')
-    (Join-Path $project 'Components\Protocol')
-    (Join-Path $project 'Components\Track')
-    (Join-Path $project 'Components\SSD1306')
-    (Join-Path $project 'Services\Inc')
-    (Join-Path $project 'App\Inc')
-    (Join-Path $project 'Examples')
+    (Join-Path $project 'Bsp')
+    (Join-Path $project 'Hardware')
+    (Join-Path $project 'Control')
+    (Join-Path $project 'User')
     (Join-Path $sdk 'source')
     (Join-Path $sdk 'source\third_party\CMSIS\Core\Include')
 )
@@ -40,15 +38,13 @@ $includeArgs = @()
 foreach ($dir in $includeDirs) { $includeArgs += ('-I' + $dir) }
 
 $sourceFiles = @(
-    (Join-Path $project 'empty.c')
     (Join-Path $syscfgOutput 'ti_msp_dl_config.c')
     (Join-Path $sdk 'source\ti\devices\msp\m0p\startup_system_files\ticlang\startup_mspm0g350x_ticlang.c')
 ) + (Get-ChildItem -LiteralPath @(
-    (Join-Path $project 'BSP\Src')
-    (Join-Path $project 'Components')
-    (Join-Path $project 'Services\Src')
-    (Join-Path $project 'App\Src')
-    (Join-Path $project 'Examples')
+    (Join-Path $project 'Bsp')
+    (Join-Path $project 'Hardware')
+    (Join-Path $project 'Control')
+    (Join-Path $project 'User')
 ) -Recurse -Filter '*.c' | ForEach-Object FullName)
 
 $objects = @()

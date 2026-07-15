@@ -1,6 +1,6 @@
 /**
- * MSPM0G3507 电赛 BSP 默认资源配置。
- * 比赛现场优先在 SysConfig GUI 中修改引脚，并同步修改 BSP/Config/bsp_config.h。
+ * MSPM0G3507 地猛星电赛模板当前硬件配置。
+ * 比赛现场只在 SysConfig GUI 中改引脚；业务参数放在 User/user_config.h。
  */
 //@cliArgs --device "MSPM0G350X" --package "LQFP-64(PM)" --part "Default"
 //@v2CliArgs --device "MSPM0G3507" --package "LQFP-64(PM)"
@@ -9,10 +9,13 @@
 const GPIO   = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIOA1 = GPIO.addInstance();
 const GPIOB1 = GPIO.addInstance();
-const I2C    = scripting.addModule("/ti/driverlib/I2C", {}, false);
-const I2C1   = I2C.addInstance();
+const CAPTURE  = scripting.addModule("/ti/driverlib/CAPTURE", {}, false);
+const CAPTURE1 = CAPTURE.addInstance();
+const CAPTURE2 = CAPTURE.addInstance();
 const PWM    = scripting.addModule("/ti/driverlib/PWM", {}, false);
 const PWM1   = PWM.addInstance();
+const SPI    = scripting.addModule("/ti/driverlib/SPI", {}, false);
+const SPI1   = SPI.addInstance();
 const SYSTICK = scripting.addModule("/ti/driverlib/SYSTICK");
 const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
 const UART   = scripting.addModule("/ti/driverlib/UART", {}, false);
@@ -32,80 +35,84 @@ SYSTICK.systickEnable = true;
 SYSTICK.period = 32000;
 SYSTICK.interruptEnable = true;
 
-/* GPIOA：TB6612、板载 LED、左编码器和寻迹输入。 */
+/* GPIOA：TB6612 方向、板载 LED、编码器 B 相、LCD 控制和五路寻迹。 */
 GPIOA1.$name = "GPIO_A";
 GPIOA1.port = "PORTA";
-GPIOA1.associatedPins.create(13);
-GPIOA1.associatedPins[0].$name = "MOTOR_AIN1";
-GPIOA1.associatedPins[0].assignedPin = "8";
-GPIOA1.associatedPins[0].pin.$assign = "PA8";
-GPIOA1.associatedPins[1].$name = "MOTOR_AIN2";
-GPIOA1.associatedPins[1].assignedPin = "9";
-GPIOA1.associatedPins[1].pin.$assign = "PA9";
+GPIOA1.associatedPins.create(12);
+GPIOA1.associatedPins[0].$name = "MOTOR_AIN2";
+GPIOA1.associatedPins[0].assignedPin = "7";
+GPIOA1.associatedPins[0].pin.$assign = "PA7";
+GPIOA1.associatedPins[1].$name = "MOTOR_BIN1";
+GPIOA1.associatedPins[1].assignedPin = "8";
+GPIOA1.associatedPins[1].pin.$assign = "PA8";
 GPIOA1.associatedPins[2].$name = "MOTOR_BIN2";
-GPIOA1.associatedPins[2].assignedPin = "7";
-GPIOA1.associatedPins[2].pin.$assign = "PA7";
+GPIOA1.associatedPins[2].assignedPin = "9";
+GPIOA1.associatedPins[2].pin.$assign = "PA9";
 GPIOA1.associatedPins[3].$name = "BOARD_LED";
+GPIOA1.associatedPins[3].initialValue = "CLEARED";
 GPIOA1.associatedPins[3].assignedPin = "14";
 GPIOA1.associatedPins[3].pin.$assign = "PA14";
-GPIOA1.associatedPins[4].$name = "ENCODER_LEFT_A";
+GPIOA1.associatedPins[4].$name = "ENCODER_LEFT_B";
 GPIOA1.associatedPins[4].direction = "INPUT";
-GPIOA1.associatedPins[4].interruptEn = true;
-GPIOA1.associatedPins[4].polarity = "RISE_FALL";
-GPIOA1.associatedPins[4].assignedPin = "21";
-GPIOA1.associatedPins[4].pin.$assign = "PA21";
-GPIOA1.associatedPins[5].$name = "ENCODER_LEFT_B";
-GPIOA1.associatedPins[5].direction = "INPUT";
-GPIOA1.associatedPins[5].assignedPin = "22";
-GPIOA1.associatedPins[5].pin.$assign = "PA22";
+GPIOA1.associatedPins[4].assignedPin = "16";
+GPIOA1.associatedPins[4].pin.$assign = "PA16";
+GPIOA1.associatedPins[5].$name = "LCD_CS";
+GPIOA1.associatedPins[5].initialValue = "SET";
+GPIOA1.associatedPins[5].assignedPin = "27";
+GPIOA1.associatedPins[5].pin.$assign = "PA27";
+GPIOA1.associatedPins[6].$name = "LCD_DC";
+GPIOA1.associatedPins[6].initialValue = "CLEARED";
+GPIOA1.associatedPins[6].assignedPin = "26";
+GPIOA1.associatedPins[6].pin.$assign = "PA26";
+GPIOA1.associatedPins[7].$name = "LCD_RES";
+GPIOA1.associatedPins[7].initialValue = "SET";
+GPIOA1.associatedPins[7].assignedPin = "25";
+GPIOA1.associatedPins[7].pin.$assign = "PA25";
+GPIOA1.associatedPins[8].$name = "LCD_BL";
+GPIOA1.associatedPins[8].initialValue = "CLEARED";
+GPIOA1.associatedPins[8].assignedPin = "24";
+GPIOA1.associatedPins[8].pin.$assign = "PA24";
+GPIOA1.associatedPins[9].$name = "TRACK_CH1";
+GPIOA1.associatedPins[9].direction = "INPUT";
+GPIOA1.associatedPins[9].assignedPin = "0";
+GPIOA1.associatedPins[9].pin.$assign = "PA0";
+GPIOA1.associatedPins[10].$name = "TRACK_CH2";
+GPIOA1.associatedPins[10].direction = "INPUT";
+GPIOA1.associatedPins[10].assignedPin = "1";
+GPIOA1.associatedPins[10].pin.$assign = "PA1";
+/* PCB 原 CH3 的 PA2 必须断开，临时用杜邦线飞到 PA15。 */
+GPIOA1.associatedPins[11].$name = "TRACK_CH3";
+GPIOA1.associatedPins[11].direction = "INPUT";
+GPIOA1.associatedPins[11].assignedPin = "15";
+GPIOA1.associatedPins[11].pin.$assign = "PA15";
 
-const trackAPins = ["24","18","17","16","15","23"];
-const trackANames = ["TRACK_D0","TRACK_D3","TRACK_D4","TRACK_D5","TRACK_D6","TRACK_D7"];
-for (let index = 0; index < 6; index++) {
-    let pin = GPIOA1.associatedPins[index + 6];
-    pin.$name = trackANames[index];
-    pin.direction = "INPUT";
-    pin.assignedPin = trackAPins[index];
-    pin.pin.$assign = "PA" + trackAPins[index];
-}
-GPIOA1.associatedPins[12].$name = "RESERVED_PA27";
-GPIOA1.associatedPins[12].direction = "INPUT";
-GPIOA1.associatedPins[12].assignedPin = "27";
-GPIOA1.associatedPins[12].pin.$assign = "PA27";
-
-/* GPIOB：TB6612、按键、右编码器和两路寻迹输入。 */
+/* GPIOB：TB6612、右编码器 B 相、两路寻迹和临时按键。 */
 GPIOB1.$name = "GPIO_B";
 GPIOB1.port = "PORTB";
-GPIOB1.associatedPins.create(7);
-GPIOB1.associatedPins[0].$name = "MOTOR_BIN1";
+GPIOB1.associatedPins.create(6);
+GPIOB1.associatedPins[0].$name = "MOTOR_AIN1";
 GPIOB1.associatedPins[0].assignedPin = "18";
 GPIOB1.associatedPins[0].pin.$assign = "PB18";
 GPIOB1.associatedPins[1].$name = "MOTOR_STBY";
 GPIOB1.associatedPins[1].assignedPin = "24";
 GPIOB1.associatedPins[1].pin.$assign = "PB24";
-GPIOB1.associatedPins[2].$name = "USER_KEY";
+GPIOB1.associatedPins[2].$name = "ENCODER_RIGHT_B";
 GPIOB1.associatedPins[2].direction = "INPUT";
-GPIOB1.associatedPins[2].internalResistor = "PULL_UP";
-GPIOB1.associatedPins[2].assignedPin = "6";
-GPIOB1.associatedPins[2].pin.$assign = "PB6";
-GPIOB1.associatedPins[3].$name = "ENCODER_RIGHT_A";
+GPIOB1.associatedPins[2].assignedPin = "20";
+GPIOB1.associatedPins[2].pin.$assign = "PB20";
+GPIOB1.associatedPins[3].$name = "TRACK_CH4";
 GPIOB1.associatedPins[3].direction = "INPUT";
-GPIOB1.associatedPins[3].interruptEn = true;
-GPIOB1.associatedPins[3].polarity = "RISE_FALL";
-GPIOB1.associatedPins[3].assignedPin = "19";
-GPIOB1.associatedPins[3].pin.$assign = "PB19";
-GPIOB1.associatedPins[4].$name = "ENCODER_RIGHT_B";
+GPIOB1.associatedPins[3].assignedPin = "6";
+GPIOB1.associatedPins[3].pin.$assign = "PB6";
+GPIOB1.associatedPins[4].$name = "TRACK_CH5";
 GPIOB1.associatedPins[4].direction = "INPUT";
-GPIOB1.associatedPins[4].assignedPin = "20";
-GPIOB1.associatedPins[4].pin.$assign = "PB20";
-GPIOB1.associatedPins[5].$name = "TRACK_D1";
+GPIOB1.associatedPins[4].assignedPin = "7";
+GPIOB1.associatedPins[4].pin.$assign = "PB7";
+GPIOB1.associatedPins[5].$name = "USER_KEY";
 GPIOB1.associatedPins[5].direction = "INPUT";
-GPIOB1.associatedPins[5].assignedPin = "9";
-GPIOB1.associatedPins[5].pin.$assign = "PB9";
-GPIOB1.associatedPins[6].$name = "TRACK_D2";
-GPIOB1.associatedPins[6].direction = "INPUT";
-GPIOB1.associatedPins[6].assignedPin = "8";
-GPIOB1.associatedPins[6].pin.$assign = "PB8";
+GPIOB1.associatedPins[5].internalResistor = "PULL_UP";
+GPIOB1.associatedPins[5].assignedPin = "2";
+GPIOB1.associatedPins[5].pin.$assign = "PB2";
 
 /* TB6612 双路 PWM：PA12/TIMG0_C0，PA13/TIMG0_C1。 */
 PWM1.$name = "MOTOR_PWM";
@@ -118,13 +125,39 @@ PWM1.peripheral.ccp1Pin.$assign = "PA13";
 PWM1.PWM_CHANNEL_0.$name = "MOTOR_LEFT_PWM";
 PWM1.PWM_CHANNEL_1.$name = "MOTOR_RIGHT_PWM";
 
-/* OLED：I2C1，PB2=SCL，PB3=SDA，400 kHz。 */
-I2C1.$name = "OLED_I2C";
-I2C1.basicEnableController = true;
-I2C1.basicControllerBusSpeed = 400000;
-I2C1.peripheral.$assign = "I2C1";
-I2C1.peripheral.sclPin.$assign = "PB2";
-I2C1.peripheral.sdaPin.$assign = "PB3";
+/* 编码器 A 相：定时器捕获双边沿，B 相由 GPIO 判断方向。 */
+CAPTURE1.$name = "ENCODER_LEFT_CAPTURE";
+CAPTURE1.timerClkSrc = "BUSCLK";
+CAPTURE1.timerClkPrescale = 32;
+CAPTURE1.timerPeriod = "2 ms";
+CAPTURE1.captEdgeDetection = "EDGE";
+CAPTURE1.interrupts = ["CC0_DN"];
+CAPTURE1.peripheral.$assign = "TIMA1";
+CAPTURE1.peripheral.ccp0Pin.$assign = "PA17";
+
+CAPTURE2.$name = "ENCODER_RIGHT_CAPTURE";
+CAPTURE2.timerClkSrc = "BUSCLK";
+CAPTURE2.timerClkPrescale = 32;
+CAPTURE2.timerPeriod = "2 ms";
+CAPTURE2.captEdgeDetection = "EDGE";
+CAPTURE2.ccIndex = 1;
+CAPTURE2.interrupts = ["CC1_DN"];
+CAPTURE2.peripheral.$assign = "TIMG8";
+CAPTURE2.peripheral.ccp1Pin.$assign = "PB19";
+
+/* ST7735S：SPI1，PB9=SCK、PB8=PICO，手动 CS，4 MHz，CPOL=1/CPHA=1。 */
+SPI1.$name = "LCD_SPI";
+SPI1.mode = "CONTROLLER";
+SPI1.frameFormat = "MOTO3";
+SPI1.polarity = "1";
+SPI1.phase = "1";
+SPI1.direction = "PICO";
+SPI1.targetBitRate = 4000000;
+SPI1.dataSize = 8;
+SPI1.bitOrder = "MSB";
+SPI1.peripheral.$assign = "SPI1";
+SPI1.peripheral.sclkPin.$assign = "PB9";
+SPI1.peripheral.mosiPin.$assign = "PB8";
 
 /* UART0 调试口：PA28 TX / PA31 RX，115200 8N1。 */
 UART1.$name = "DEBUG_UART";
@@ -134,10 +167,10 @@ UART1.peripheral.$assign = "UART0";
 UART1.peripheral.txPin.$assign = "PA28";
 UART1.peripheral.rxPin.$assign = "PA31";
 
-/* UART3 惯导口：PA26 TX / PA25 RX，模块示例协议为 115200 8N1。 */
+/* UART2 惯导口：PA21 TX / PA22 RX，模块示例协议为 115200 8N1。 */
 UART2.$name = "IMU_UART";
 UART2.targetBaudRate = 115200;
 UART2.enabledInterrupts = ["RX"];
-UART2.peripheral.$assign = "UART3";
-UART2.peripheral.txPin.$assign = "PA26";
-UART2.peripheral.rxPin.$assign = "PA25";
+UART2.peripheral.$assign = "UART2";
+UART2.peripheral.txPin.$assign = "PA21";
+UART2.peripheral.rxPin.$assign = "PA22";

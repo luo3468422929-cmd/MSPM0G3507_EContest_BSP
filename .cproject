@@ -40,16 +40,10 @@
                                     <listOptionValue value="${PROJECT_ROOT}/${ConfigName}"/>
                                     <listOptionValue value="${COM_TI_MSPM0_SDK_INSTALL_DIR}/source/third_party/CMSIS/Core/Include"/>
                                     <listOptionValue value="${COM_TI_MSPM0_SDK_INSTALL_DIR}/source"/>
-                                    <listOptionValue value="${PROJECT_ROOT}/BSP/Config"/>
-                                    <listOptionValue value="${PROJECT_ROOT}/BSP/Inc"/>
-                                    <listOptionValue value="${PROJECT_ROOT}/Components/PID"/>
-                                    <listOptionValue value="${PROJECT_ROOT}/Components/Filter"/>
-                                    <listOptionValue value="${PROJECT_ROOT}/Components/RingBuffer"/>
-                                    <listOptionValue value="${PROJECT_ROOT}/Components/Protocol"/>
-                                    <listOptionValue value="${PROJECT_ROOT}/Components/Track"/>
-                                    <listOptionValue value="${PROJECT_ROOT}/Components/SSD1306"/>
-                                    <listOptionValue value="${PROJECT_ROOT}/Services/Inc"/>
-                                    <listOptionValue value="${PROJECT_ROOT}/App/Inc"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/Bsp"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/Hardware"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/Control"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/User"/>
                                 </option>
                                 <option id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.compilerID.DEFINE.1381004779" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.compilerID.DEFINE" valueType="definedSymbols">
                                     <listOptionValue value="${COM_TI_MSPM0_SDK_SYMBOLS}"/>
@@ -100,7 +94,7 @@
                         </toolChain>
                     </folderInfo>
                     <sourceEntries>
-                        <entry excluding="Tests/Host" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        <entry excluding="Debug|Release|Tests|docs" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
                     </sourceEntries>
                 </configuration>
             </storageModule>

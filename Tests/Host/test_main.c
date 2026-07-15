@@ -130,6 +130,14 @@ static void Test_TrackMath_PositionAndLost(void)
     CHECK_TRUE(result.state == TRACK_STATE_LOST);
 }
 
+static void Test_TrackMath_FiveChannels(void)
+{
+    const float weights[5] = {-4.0f, -2.0f, 0.0f, 2.0f, 4.0f};
+    CHECK_NEAR(TrackMath_WeightedPosition(0x04U, weights, 5U), 0.0f, 0.0001f);
+    CHECK_NEAR(TrackMath_WeightedPosition(0x03U, weights, 5U), -3.0f, 0.0001f);
+    CHECK_NEAR(TrackMath_WeightedPosition(0x18U, weights, 5U), 3.0f, 0.0001f);
+}
+
 int main(void)
 {
     Test_PID_PositionAndLimits();
@@ -139,6 +147,7 @@ int main(void)
     Test_ImuProtocol_ValidAndResync();
     Test_FrameProtocol_VariableLengthAndChecksum();
     Test_TrackMath_PositionAndLost();
+    Test_TrackMath_FiveChannels();
     if (g_failures == 0) {
         puts("ALL HOST TESTS PASSED");
         return 0;
