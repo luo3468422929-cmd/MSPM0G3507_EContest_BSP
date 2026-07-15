@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 & (Join-Path $PSScriptRoot 'test_target_pinout.ps1')
 & (Join-Path $PSScriptRoot 'test_lcd_api.ps1')
+& (Join-Path $PSScriptRoot 'test_lcd_font_bitmap_api.ps1')
 & (Join-Path $PSScriptRoot 'test_user_api.ps1')
 & (Join-Path $PSScriptRoot 'test_beginner_docs.ps1')
 

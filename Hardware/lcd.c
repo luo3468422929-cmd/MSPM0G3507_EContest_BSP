@@ -208,6 +208,38 @@ Status_t LCD_Clear(uint16_t color)
     return LCD_Fill(0U, 0U, LCD_WIDTH - 1U, LCD_HEIGHT - 1U, color);
 }
 
+Status_t LCD_WriteRegion(uint16_t x, uint16_t y,
+                         uint16_t width, uint16_t height,
+                         const uint8_t *data, uint32_t length)
+{
+    uint32_t expected;
+    Status_t status;
+
+    if (!g_initialized) { return STATUS_NOT_INITIALIZED; }
+    if ((data == NULL) || (width == 0U) || (height == 0U)) {
+        return STATUS_INVALID_PARAM;
+    }
+    if ((x >= LCD_WIDTH) || (y >= LCD_HEIGHT) ||
+        (width > (LCD_WIDTH - x)) || (height > (LCD_HEIGHT - y))) {
+        return STATUS_INVALID_PARAM;
+    }
+    expected = (uint32_t)width * (uint32_t)height * 2U;
+    if (length != expected) { return STATUS_INVALID_PARAM; }
+
+    status = LCD_SetAddressWindow(x, y,
+                                  (uint16_t)(x + width - 1U),
+                                  (uint16_t)(y + height - 1U));
+    if (status != STATUS_OK) { return status; }
+    while (length != 0U) {
+        uint16_t chunk = (length > 4096U) ? 4096U : (uint16_t)length;
+        status = LCD_WritePixels(data, chunk);
+        if (status != STATUS_OK) { return status; }
+        data += chunk;
+        length -= chunk;
+    }
+    return STATUS_OK;
+}
+
 static Status_t LCD_ShowChar(uint16_t x, uint16_t y, char character,
                              uint16_t color, uint16_t background)
 {

@@ -4,6 +4,8 @@
 #include "imu.h"
 #include "key.h"
 #include "lcd.h"
+#include "lcd_bitmap.h"
+#include "lcd_font.h"
 #include "led.h"
 #include "motor.h"
 #include "track.h"
@@ -14,6 +16,30 @@ static Test_Id_t g_test = TEST_NONE;
 static uint32_t g_lastTickMs;
 static uint8_t g_phase;
 static bool g_firstRun;
+
+/* 16×16 RGB565 棋盘图，仅用于验证图片接口和高字节在前的数据格式。 */
+#define LCD_CHECKER_ROW_A \
+    0xFF,0xE0, 0xFF,0xE0, 0xFF,0xE0, 0xFF,0xE0, \
+    0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, \
+    0xFF,0xE0, 0xFF,0xE0, 0xFF,0xE0, 0xFF,0xE0, \
+    0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00
+#define LCD_CHECKER_ROW_B \
+    0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, \
+    0xFF,0xE0, 0xFF,0xE0, 0xFF,0xE0, 0xFF,0xE0, \
+    0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, \
+    0xFF,0xE0, 0xFF,0xE0, 0xFF,0xE0, 0xFF,0xE0
+static const uint8_t g_lcdCheckerboard[16U * 16U * 2U] = {
+    LCD_CHECKER_ROW_A, LCD_CHECKER_ROW_B,
+    LCD_CHECKER_ROW_A, LCD_CHECKER_ROW_B,
+    LCD_CHECKER_ROW_A, LCD_CHECKER_ROW_B,
+    LCD_CHECKER_ROW_A, LCD_CHECKER_ROW_B,
+    LCD_CHECKER_ROW_A, LCD_CHECKER_ROW_B,
+    LCD_CHECKER_ROW_A, LCD_CHECKER_ROW_B,
+    LCD_CHECKER_ROW_A, LCD_CHECKER_ROW_B,
+    LCD_CHECKER_ROW_A, LCD_CHECKER_ROW_B
+};
+#undef LCD_CHECKER_ROW_A
+#undef LCD_CHECKER_ROW_B
 
 void Test_Select(Test_Id_t id)
 {
@@ -123,6 +149,9 @@ static void Test_RunLcd(void)
     (void)LCD_Fill(96U, 0U, 127U, 31U, LCD_COLOR_WHITE);
     (void)LCD_ShowString(34U, 48U, "LCD OK", LCD_COLOR_YELLOW,
                          LCD_COLOR_BLACK);
+    (void)LCD_ShowChinese16(8U, 96U, "\xE7\x94\xB5\xE8\xB5\x9B",
+                            LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
+    (void)LCD_ShowBitmap(96U, 96U, 16U, 16U, g_lcdCheckerboard);
 }
 
 void Test_Run(uint32_t nowMs)
