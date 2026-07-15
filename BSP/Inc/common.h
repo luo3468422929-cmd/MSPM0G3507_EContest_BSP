@@ -16,7 +16,8 @@ typedef enum {
     STATUS_OVERFLOW,
     STATUS_EMPTY,
     STATUS_CRC_ERROR,
-    STATUS_NOT_SUPPORTED
+    STATUS_NOT_SUPPORTED,
+    STATUS_DISABLED
 } Status_t;
 
 #ifndef ARRAY_SIZE
@@ -34,4 +35,3 @@ static inline int32_t Common_ClampInt32(int32_t value, int32_t minimum, int32_t 
 }
 
 #endif
-

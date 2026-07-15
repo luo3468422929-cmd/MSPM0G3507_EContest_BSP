@@ -83,7 +83,7 @@ Status_t Motor_SetDuty(Motor_Id_t id, int16_t duty)
         return STATUS_INVALID_PARAM;
     }
     if (!g_enabled) {
-        return STATUS_NOT_INITIALIZED;
+        return STATUS_DISABLED;
     }
     duty = Motor_LimitDuty(duty);
     if ((duty != 0) && (duty < MOTOR_MIN_START_DUTY) && (duty > -MOTOR_MIN_START_DUTY)) {
@@ -146,4 +146,3 @@ int16_t Motor_GetAppliedDuty(Motor_Id_t id)
 {
     return Motor_IdIsValid(id) ? g_motor[id].appliedDuty : 0;
 }
-

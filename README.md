@@ -23,9 +23,9 @@
 
 1. 用 CCS 导入本目录。
 2. 打开 `empty.syscfg`，确认本机仍使用 MSPM0 SDK 2.10.0.04 和 SysConfig 1.26.2。
-3. 对照 `Docs/引脚资源分配表.md` 接线。
+3. 对照 `docs/引脚资源分配表.md` 接线。
 4. 先断开电机电源构建工程，排除 SysConfig 和编译问题。
-5. 按 `Docs/电赛快速上手指南.md` 逐模块上板测试。
+5. 按 `docs/电赛快速上手指南.md` 逐模块上板测试。
 
 ## 关键规则
 
@@ -33,14 +33,13 @@
 - 不编辑 `ti_msp_dl_config.c/.h`。
 - 电机方向、编码器方向、传感器极性和参数只改 `bsp_config.h`。
 - 引脚复用和外设实例先改 `.syscfg`，再同步配置宏。
-- 默认寻迹配置为八路数字输入；模拟灰度阵列按 `Docs/SysConfig配置指南.md` 启用 ADC0 MEM0～MEM7。
+- 默认寻迹配置为八路数字输入；模拟灰度阵列按 `docs/SysConfig配置指南.md` 启用 ADC0 MEM0～MEM7。
 
 ## 文档索引
 
-- `Docs/CCS工程导入指南.md`
-- `Docs/SysConfig配置指南.md`
-- `Docs/模块接口手册.md`
-- `Docs/BSP移植指南.md`
-- `Docs/引脚资源分配表.md`
-- `Docs/电赛快速上手指南.md`
-
+- `docs/CCS工程导入指南.md`
+- `docs/SysConfig配置指南.md`
+- `docs/模块接口手册.md`
+- `docs/BSP移植指南.md`
+- `docs/引脚资源分配表.md`
+- `docs/电赛快速上手指南.md`

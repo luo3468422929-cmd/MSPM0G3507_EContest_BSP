@@ -130,6 +130,7 @@ Status_t Track_CalibrationFinish(void)
         if (g_data.maximum[index] <= g_data.minimum[index]) {
             return STATUS_ERROR;
         }
+        /* 后续先用本通道 min/max 归一化到 0~1000，500 即动态量程中点。 */
         g_data.threshold[index] = 500U;
     }
     g_data.calibrated = true;

@@ -12,6 +12,7 @@ $sources = @(
     (Join-Path $project 'Components\Protocol\imu_protocol.c')
     (Join-Path $project 'Components\Protocol\frame_protocol.c')
     (Join-Path $project 'Components\Track\track_math.c')
+    (Join-Path $project 'Services\Src\scheduler.c')
 )
 $includeDirs = @(
     (Join-Path $project 'BSP\Inc')
@@ -20,6 +21,7 @@ $includeDirs = @(
     (Join-Path $project 'Components\RingBuffer')
     (Join-Path $project 'Components\Protocol')
     (Join-Path $project 'Components\Track')
+    (Join-Path $project 'Services\Inc')
 )
 $includeArgs = @()
 foreach ($dir in $includeDirs) { $includeArgs += ('-I' + $dir) }

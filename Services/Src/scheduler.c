@@ -1,6 +1,6 @@
 #include "scheduler.h"
 
-static const uint16_t g_periodMs[SCHEDULER_TASK_COUNT] = {5U, 10U, 20U, 100U};
+static const uint16_t g_periodMs[SCHEDULER_TASK_COUNT] = {5U, 10U, 20U, 100U, 200U};
 static uint32_t g_lastRunMs[SCHEDULER_TASK_COUNT];
 
 void Scheduler_Init(uint32_t nowMs)
@@ -12,7 +12,7 @@ void Scheduler_Init(uint32_t nowMs)
 
 bool Scheduler_IsDue(Scheduler_Task_t task, uint32_t nowMs)
 {
-    if ((task < SCHEDULER_TASK_5_MS) || (task >= SCHEDULER_TASK_COUNT)) {
+    if (task >= SCHEDULER_TASK_COUNT) {
         return false;
     }
     if ((uint32_t)(nowMs - g_lastRunMs[task]) >= g_periodMs[task]) {
@@ -22,4 +22,3 @@ bool Scheduler_IsDue(Scheduler_Task_t task, uint32_t nowMs)
     }
     return false;
 }
-

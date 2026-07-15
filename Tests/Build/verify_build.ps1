@@ -93,4 +93,9 @@ $linkArgs = @('-Wl,-u,_c_int00') + $objects + @(
 & $compiler @linkArgs
 if ($LASTEXITCODE -ne 0) { throw "Link failed: $LASTEXITCODE" }
 
+# 当前应用会用 snprintf 格式化浮点数；map 中必须包含 TI libc 的浮点转换实现。
+if (-not (Select-String -LiteralPath $map -Pattern '.text._pconv_f' -SimpleMatch -Quiet)) {
+    throw 'TI libc floating-point printf support was not linked'
+}
+
 Write-Output "BUILD VERIFIED: $firmware"

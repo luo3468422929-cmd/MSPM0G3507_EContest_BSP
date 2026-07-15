@@ -34,6 +34,7 @@
 #define MOTOR_PWM_RIGHT_CC_INDEX       DL_TIMER_CC_1_INDEX
 #define MOTOR_PWM_PERIOD_COUNTS        1000U
 #define MOTOR_MAX_DUTY                 1000
+/* TB6612/电机静摩擦补偿；精细低速闭环不需要时可设为 0。 */
 #define MOTOR_MIN_START_DUTY           80
 #define MOTOR_RAMP_STEP                40
 

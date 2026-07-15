@@ -25,17 +25,17 @@ static void App_UpdateDisplay(uint32_t nowMs)
     const MotorControl_Data_t *motor = MotorControl_GetData();
     OLED_Clear();
     (void)OLED_ShowString(0U, 0U, g_running ? "RUN" : "STOP");
-    (void)snprintf(line, sizeof(line), "TRK %02X E%.2F", track->activeMask,
+    (void)snprintf(line, sizeof(line), "TRK %02X E%.2f", track->activeMask,
                    (double)track->positionError);
     (void)OLED_ShowString(0U, 8U, line);
-    (void)snprintf(line, sizeof(line), "L %.0F/%.0F", (double)motor->actualLeftRpm,
+    (void)snprintf(line, sizeof(line), "L %.0f/%.0f", (double)motor->actualLeftRpm,
                    (double)motor->targetLeftRpm);
     (void)OLED_ShowString(0U, 16U, line);
-    (void)snprintf(line, sizeof(line), "R %.0F/%.0F", (double)motor->actualRightRpm,
+    (void)snprintf(line, sizeof(line), "R %.0f/%.0f", (double)motor->actualRightRpm,
                    (double)motor->targetRightRpm);
     (void)OLED_ShowString(0U, 24U, line);
     if (IMU_GetSample(&imu) == STATUS_OK) {
-        (void)snprintf(line, sizeof(line), "YAW %.1F %s", (double)imu.yawDeg,
+        (void)snprintf(line, sizeof(line), "YAW %.1f %s", (double)imu.yawDeg,
                        IMU_IsOnline(nowMs) ? "OK" : "OFF");
     } else {
         (void)snprintf(line, sizeof(line), "IMU WAIT");
@@ -78,7 +78,7 @@ void App_Run(void)
         IMU_Process(nowMs);
         Command_Process();
     }
-    if (Scheduler_IsDue(SCHEDULER_TASK_100_MS, nowMs)) {
+    if (Scheduler_IsDue(SCHEDULER_TASK_200_MS, nowMs)) {
         App_UpdateDisplay(nowMs);
     }
 }
