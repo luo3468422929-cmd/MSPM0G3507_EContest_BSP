@@ -22,3 +22,4 @@ Event.dot
 # 本地测试与编辑器缓存
 Tests/Host/build/
 .clangd/
+.worktrees/
