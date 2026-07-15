@@ -94,7 +94,12 @@
                         </toolChain>
                     </folderInfo>
                     <sourceEntries>
-                        <entry excluding="Debug|Release|Tests|docs" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        <!-- 根目录只保留 SysConfig/工程元数据；四个源码目录显式声明，避免 CCS 漏收集 Bsp/*.c。 -->
+                        <entry excluding="Debug|Release|Tests|docs|Bsp|Control|Hardware|User" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Bsp"/>
+                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Control"/>
+                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Hardware"/>
+                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="User"/>
                     </sourceEntries>
                 </configuration>
             </storageModule>
