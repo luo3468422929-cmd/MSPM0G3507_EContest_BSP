@@ -2,8 +2,8 @@
  * MSPM0G3507 地猛星电赛模板当前硬件配置。
  * 比赛现场只在 SysConfig GUI 中改引脚；业务参数放在 User/user_config.h。
  */
-//@cliArgs --device "MSPM0G350X" --package "LQFP-64(PM)" --part "Default"
-//@v2CliArgs --device "MSPM0G3507" --package "LQFP-64(PM)"
+//@cliArgs --device "MSPM0G350X" --package "LQFP-48(PT)" --part "Default"
+//@v2CliArgs --device "MSPM0G3507" --package "LQFP-48(PT)"
 // @cliArgs --board /ti/boards/LP_MSPM0G3507 --rtos nortos
 
 const GPIO   = scripting.addModule("/ti/driverlib/GPIO", {}, false);

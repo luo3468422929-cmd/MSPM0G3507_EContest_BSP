@@ -2,7 +2,7 @@
 
 1. CCS 选择 `File > Import Projects`，选择工程根目录。
 2. 确认工程使用 MSPM0 SDK 2.10.0.04、SysConfig 1.26.2、TI Clang 4.0.x LTS。
-3. 双击 `empty.syscfg`，确认设备为 MSPM0G3507 LQFP-64 且没有红色冲突。
+3. 双击 `empty.syscfg`，确认设备为 MSPM0G3507 LQFP-48(PT) 且没有红色冲突。
 4. `Project > Clean` 后构建 Debug。
 5. CCS 的 include path 应只有工程根、Debug、`Bsp`、`Hardware`、`Control`、`User` 和 SDK 路径。
 

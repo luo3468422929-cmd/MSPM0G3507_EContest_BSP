@@ -28,6 +28,12 @@ function Require-Pattern {
     }
 }
 
+Require-Pattern '@v2CliArgs\s+--device\s+"MSPM0G3507"\s+--package\s+"LQFP-48\(PT\)"' `
+    'MSPM0G3507 must use the 48-pin LQFP-48(PT) package'
+if ($syscfg -cmatch 'LQFP-64\(PM\)') {
+    throw 'empty.syscfg still references the 64-pin package'
+}
+
 Require-NamedPin -Name 'MOTOR_AIN1' -Pin 'PB18'
 Require-NamedPin -Name 'MOTOR_AIN2' -Pin 'PA7'
 Require-NamedPin -Name 'MOTOR_BIN1' -Pin 'PA8'
