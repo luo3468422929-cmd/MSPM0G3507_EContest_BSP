@@ -113,9 +113,11 @@ static void Test_RunEncoder(uint32_t nowMs)
 {
     Encoder_Data_t left;
     Encoder_Data_t right;
+    uint32_t elapsedMs;
     if ((uint32_t)(nowMs - g_lastTickMs) < 100U) { return; }
+    elapsedMs = (uint32_t)(nowMs - g_lastTickMs);
     g_lastTickMs = nowMs;
-    Encoder_UpdateSpeed(0.1f);
+    Encoder_UpdateSpeed((float)elapsedMs / 1000.0f);
     (void)Encoder_GetData(ENCODER_LEFT, &left);
     (void)Encoder_GetData(ENCODER_RIGHT, &right);
     (void)UART_Printf("ENC L=%ld %.1f R=%ld %.1f\r\n",

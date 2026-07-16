@@ -10,6 +10,8 @@ static PID_t g_leftSpeedPid;
 static PID_t g_rightSpeedPid;
 static PID_t g_steeringPid;
 static CarControl_Data_t g_data;
+static uint32_t g_lastEncoderUpdateMs;
+static bool g_encoderTimeInitialized;
 
 static Status_t CarControl_InitPids(void)
 {
@@ -49,12 +51,16 @@ Status_t CarControl_Init(void)
     g_data = (CarControl_Data_t){
         .baseSpeedRpm = CAR_DEFAULT_BASE_SPEED_RPM
     };
+    g_lastEncoderUpdateMs = 0U;
+    g_encoderTimeInitialized = false;
     return STATUS_OK;
 }
 
 void CarControl_Enable(bool enable)
 {
     if (enable) {
+        /* 不把停车期间的时间计入下一次速度统计窗口。 */
+        g_encoderTimeInitialized = false;
         if (Motor_Enable(true) == STATUS_OK) {
             g_data.enabled = true;
         }
@@ -69,14 +75,24 @@ void CarControl_SetBaseSpeed(float rpm)
     g_data.baseSpeedRpm = (rpm < 0.0f) ? 0.0f : rpm;
 }
 
-void CarControl_Update(void)
+void CarControl_Update(uint32_t nowMs)
 {
     Encoder_Data_t left = {0};
     Encoder_Data_t right = {0};
     const Track_Data_t *track;
+    uint32_t elapsedMs;
 
     (void)Track_Update();
-    Encoder_UpdateSpeed(CONTROL_SAMPLE_TIME_S);
+    if (!g_encoderTimeInitialized) {
+        g_lastEncoderUpdateMs = nowMs;
+        g_encoderTimeInitialized = true;
+    } else {
+        elapsedMs = (uint32_t)(nowMs - g_lastEncoderUpdateMs);
+        if (elapsedMs != 0U) {
+            Encoder_UpdateSpeed((float)elapsedMs / 1000.0f);
+            g_lastEncoderUpdateMs = nowMs;
+        }
+    }
     (void)Encoder_GetData(ENCODER_LEFT, &left);
     (void)Encoder_GetData(ENCODER_RIGHT, &right);
     track = Track_GetData();
@@ -117,6 +133,7 @@ void CarControl_Update(void)
 void CarControl_Stop(void)
 {
     g_data.enabled = false;
+    g_encoderTimeInitialized = false;
     g_data.targetLeftRpm = 0.0f;
     g_data.targetRightRpm = 0.0f;
     g_data.outputLeft = 0.0f;

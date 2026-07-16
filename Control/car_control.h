@@ -20,7 +20,7 @@ typedef struct {
 Status_t CarControl_Init(void);
 void CarControl_Enable(bool enable);
 void CarControl_SetBaseSpeed(float rpm);
-void CarControl_Update(void);
+void CarControl_Update(uint32_t nowMs);
 void CarControl_Stop(void);
 const CarControl_Data_t *CarControl_GetData(void);
 

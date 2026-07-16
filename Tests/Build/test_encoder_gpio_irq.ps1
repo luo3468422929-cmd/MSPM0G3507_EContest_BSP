@@ -11,8 +11,12 @@ if ($syscfg -cmatch 'CAPTURE1|CAPTURE2|ENCODER_LEFT_CAPTURE|ENCODER_RIGHT_CAPTUR
 foreach ($pattern in @(
     'PIN_ENCODER_LEFT_A_PORT\s+GPIO_A_PORT',
     'PIN_ENCODER_LEFT_A\s+GPIO_A_ENCODER_LEFT_A_PIN',
+    'PIN_ENCODER_LEFT_B_PORT\s+GPIO_A_PORT',
+    'PIN_ENCODER_LEFT_B\s+GPIO_A_ENCODER_LEFT_B_PIN',
     'PIN_ENCODER_RIGHT_A_PORT\s+GPIO_B_PORT',
-    'PIN_ENCODER_RIGHT_A\s+GPIO_B_ENCODER_RIGHT_A_PIN')) {
+    'PIN_ENCODER_RIGHT_A\s+GPIO_B_ENCODER_RIGHT_A_PIN',
+    'PIN_ENCODER_RIGHT_B_PORT\s+GPIO_B_PORT',
+    'PIN_ENCODER_RIGHT_B\s+GPIO_B_ENCODER_RIGHT_B_PIN')) {
     if ($pins -cnotmatch $pattern) {
         throw "board_pins.h missing GPIO encoder mapping: $pattern"
     }
@@ -23,8 +27,10 @@ if ($encoder -cnotmatch 'void\s+GROUP1_IRQHandler\s*\(void\)') {
 foreach ($pattern in @(
     'DL_GPIO_getEnabledInterruptStatus',
     'DL_GPIO_clearInterruptStatus',
-    'Encoder_HandleLeftEdge',
-    'Encoder_HandleRightEdge')) {
+    'Encoder_HandleLeftARising',
+    'Encoder_HandleLeftBRising',
+    'Encoder_HandleRightARising',
+    'Encoder_HandleRightBRising')) {
     if ($encoder -cnotmatch [regex]::Escape($pattern)) {
         throw "encoder GPIO IRQ handling is missing: $pattern"
     }

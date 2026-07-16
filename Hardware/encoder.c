@@ -33,15 +33,18 @@ Status_t Encoder_Init(void)
     return STATUS_OK;
 }
 
-void Encoder_OnEdge(Encoder_Id_t id, bool phaseAHigh, bool phaseBHigh)
+void Encoder_OnEdge(Encoder_Id_t id, Encoder_Edge_t edge,
+                    bool phaseAHigh, bool phaseBHigh)
 {
-    int32_t direction;
+    int8_t direction;
     bool reversed;
     if (!Encoder_IdIsValid(id)) {
         return;
     }
-    /* A 相双边沿计数：A/B 同相和异相分别代表两个运动方向。 */
-    direction = (phaseAHigh == phaseBHigh) ? 1 : -1;
+    direction = EncoderDecode_GetIncrement(edge, phaseAHigh, phaseBHigh);
+    if (direction == 0) {
+        return;
+    }
     reversed = (id == ENCODER_LEFT) ? ENCODER_LEFT_REVERSED : ENCODER_RIGHT_REVERSED;
     g_encoder[id].count += reversed ? -direction : direction;
 }
@@ -103,39 +106,71 @@ void Encoder_Reset(Encoder_Id_t id)
     g_encoder[id].speedInitialized = false;
 }
 
-static void Encoder_HandleLeftEdge(void)
+static void Encoder_HandleLeftARising(void)
 {
     bool phaseAHigh = DL_GPIO_readPins(PIN_ENCODER_LEFT_A_PORT,
                                        PIN_ENCODER_LEFT_A) != 0U;
     bool phaseBHigh = DL_GPIO_readPins(PIN_ENCODER_LEFT_B_PORT,
                                        PIN_ENCODER_LEFT_B) != 0U;
-    Encoder_OnEdge(ENCODER_LEFT, phaseAHigh, phaseBHigh);
+    Encoder_OnEdge(ENCODER_LEFT, ENCODER_EDGE_A_RISING,
+                   phaseAHigh, phaseBHigh);
 }
 
-static void Encoder_HandleRightEdge(void)
+static void Encoder_HandleLeftBRising(void)
+{
+    bool phaseAHigh = DL_GPIO_readPins(PIN_ENCODER_LEFT_A_PORT,
+                                       PIN_ENCODER_LEFT_A) != 0U;
+    bool phaseBHigh = DL_GPIO_readPins(PIN_ENCODER_LEFT_B_PORT,
+                                       PIN_ENCODER_LEFT_B) != 0U;
+    Encoder_OnEdge(ENCODER_LEFT, ENCODER_EDGE_B_RISING,
+                   phaseAHigh, phaseBHigh);
+}
+
+static void Encoder_HandleRightARising(void)
 {
     bool phaseAHigh = DL_GPIO_readPins(PIN_ENCODER_RIGHT_A_PORT,
                                        PIN_ENCODER_RIGHT_A) != 0U;
     bool phaseBHigh = DL_GPIO_readPins(PIN_ENCODER_RIGHT_B_PORT,
                                        PIN_ENCODER_RIGHT_B) != 0U;
-    Encoder_OnEdge(ENCODER_RIGHT, phaseAHigh, phaseBHigh);
+    Encoder_OnEdge(ENCODER_RIGHT, ENCODER_EDGE_A_RISING,
+                   phaseAHigh, phaseBHigh);
+}
+
+static void Encoder_HandleRightBRising(void)
+{
+    bool phaseAHigh = DL_GPIO_readPins(PIN_ENCODER_RIGHT_A_PORT,
+                                       PIN_ENCODER_RIGHT_A) != 0U;
+    bool phaseBHigh = DL_GPIO_readPins(PIN_ENCODER_RIGHT_B_PORT,
+                                       PIN_ENCODER_RIGHT_B) != 0U;
+    Encoder_OnEdge(ENCODER_RIGHT, ENCODER_EDGE_B_RISING,
+                   phaseAHigh, phaseBHigh);
 }
 
 void GROUP1_IRQHandler(void)
 {
     uint32_t gpioAStatus = DL_GPIO_getEnabledInterruptStatus(
-        PIN_ENCODER_LEFT_A_PORT, PIN_ENCODER_LEFT_A);
+        PIN_ENCODER_LEFT_A_PORT, PIN_ENCODER_LEFT_A | PIN_ENCODER_LEFT_B);
     uint32_t gpioBStatus = DL_GPIO_getEnabledInterruptStatus(
-        PIN_ENCODER_RIGHT_A_PORT, PIN_ENCODER_RIGHT_A);
+        PIN_ENCODER_RIGHT_A_PORT, PIN_ENCODER_RIGHT_A | PIN_ENCODER_RIGHT_B);
 
-    if (gpioAStatus != 0U) {
-        Encoder_HandleLeftEdge();
+    if ((gpioAStatus & PIN_ENCODER_LEFT_A) != 0U) {
+        Encoder_HandleLeftARising();
         DL_GPIO_clearInterruptStatus(PIN_ENCODER_LEFT_A_PORT,
                                      PIN_ENCODER_LEFT_A);
     }
-    if (gpioBStatus != 0U) {
-        Encoder_HandleRightEdge();
+    if ((gpioAStatus & PIN_ENCODER_LEFT_B) != 0U) {
+        Encoder_HandleLeftBRising();
+        DL_GPIO_clearInterruptStatus(PIN_ENCODER_LEFT_B_PORT,
+                                     PIN_ENCODER_LEFT_B);
+    }
+    if ((gpioBStatus & PIN_ENCODER_RIGHT_A) != 0U) {
+        Encoder_HandleRightARising();
         DL_GPIO_clearInterruptStatus(PIN_ENCODER_RIGHT_A_PORT,
                                      PIN_ENCODER_RIGHT_A);
+    }
+    if ((gpioBStatus & PIN_ENCODER_RIGHT_B) != 0U) {
+        Encoder_HandleRightBRising();
+        DL_GPIO_clearInterruptStatus(PIN_ENCODER_RIGHT_B_PORT,
+                                     PIN_ENCODER_RIGHT_B);
     }
 }

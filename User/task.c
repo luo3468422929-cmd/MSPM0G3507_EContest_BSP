@@ -102,7 +102,7 @@ void Task_Run(void)
     }
     if (Scheduler_IsDue(SCHEDULER_TASK_10_MS, nowMs)) {
         if (g_state == TASK_RUNNING) {
-            CarControl_Update();
+            CarControl_Update(nowMs);
         } else {
             (void)Track_Update();
         }

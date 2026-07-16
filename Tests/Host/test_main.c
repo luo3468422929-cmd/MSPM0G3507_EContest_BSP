@@ -11,6 +11,7 @@
 #include "pid.h"
 #include "ring_buffer.h"
 #include "track_math.h"
+#include "encoder_decode.h"
 #include "encoder_speed_window.h"
 
 static int g_failures;
@@ -182,6 +183,23 @@ static void Test_EncoderSpeedWindow_InvalidParameters(void)
                                       780.0f, &rpm, &ready) == STATUS_INVALID_PARAM);
 }
 
+static void Test_EncoderDecode_X2RisingEdges(void)
+{
+    /* A 相领先 B 相的两个上升沿，应得到相同方向的两次计数。 */
+    CHECK_TRUE(EncoderDecode_GetIncrement(ENCODER_EDGE_A_RISING,
+                                          true, false) == -1);
+    CHECK_TRUE(EncoderDecode_GetIncrement(ENCODER_EDGE_B_RISING,
+                                          true, true) == -1);
+
+    /* B 相领先 A 相时，两个上升沿也应得到相同方向的两次计数。 */
+    CHECK_TRUE(EncoderDecode_GetIncrement(ENCODER_EDGE_B_RISING,
+                                          false, true) == 1);
+    CHECK_TRUE(EncoderDecode_GetIncrement(ENCODER_EDGE_A_RISING,
+                                          true, true) == 1);
+    CHECK_TRUE(EncoderDecode_GetIncrement(ENCODER_EDGE_COUNT,
+                                          false, false) == 0);
+}
+
 int main(void)
 {
     Test_PID_PositionAndLimits();
@@ -194,6 +212,7 @@ int main(void)
     Test_TrackMath_FiveChannels();
     Test_EncoderSpeedWindow_Fixed50MsAndAdaptive100Ms();
     Test_EncoderSpeedWindow_InvalidParameters();
+    Test_EncoderDecode_X2RisingEdges();
     if (g_failures == 0) {
         puts("ALL HOST TESTS PASSED");
         return 0;

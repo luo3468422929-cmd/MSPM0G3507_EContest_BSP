@@ -2,6 +2,7 @@
 #define ENCODER_H
 
 #include "common.h"
+#include "encoder_decode.h"
 
 typedef enum {
     ENCODER_LEFT = 0,
@@ -17,7 +18,8 @@ typedef struct {
 } Encoder_Data_t;
 
 Status_t Encoder_Init(void);
-void Encoder_OnEdge(Encoder_Id_t id, bool phaseAHigh, bool phaseBHigh);
+void Encoder_OnEdge(Encoder_Id_t id, Encoder_Edge_t edge,
+                    bool phaseAHigh, bool phaseBHigh);
 void Encoder_UpdateSpeed(float sampleTimeS);
 Status_t Encoder_GetData(Encoder_Id_t id, Encoder_Data_t *data);
 void Encoder_Reset(Encoder_Id_t id);
