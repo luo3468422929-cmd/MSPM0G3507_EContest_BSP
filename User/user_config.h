@@ -36,10 +36,11 @@
 
 /* 编码器与轮组机械参数。 */
 #define ENCODER_LEFT_REVERSED             0
-#define ENCODER_RIGHT_REVERSED            0
-#define ENCODER_PULSES_PER_MOTOR_REV      13.0f /* 标定目标：13 × 2 × 30 = 780。 */
+#define ENCODER_RIGHT_REVERSED            1
+#define ENCODER_PULSES_PER_MOTOR_REV      11.0f /* 厂家标称：电机轴一圈 11 个信号。 */
 #define ENCODER_COUNT_MULTIPLIER          2.0f  /* A/B 两相上升沿 x2 解码。 */
-#define ENCODER_GEAR_RATIO                30.0f
+#define ENCODER_GEAR_RATIO                20.4545f /* 450/(11×2)，仅记录实测有效比。 */
+#define ENCODER_COUNTS_PER_WHEEL_REV      450.0f /* 实测输出轴一圈 450 个计数。 */
 #define ENCODER_WHEEL_DIAMETER_M          0.065f
 #define ENCODER_SPEED_WINDOW_S            0.05f
 #define ENCODER_SPEED_FILTER_ALPHA        0.35f

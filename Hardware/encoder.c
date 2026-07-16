@@ -51,8 +51,7 @@ void Encoder_OnEdge(Encoder_Id_t id, Encoder_Edge_t edge,
 
 void Encoder_UpdateSpeed(float sampleTimeS)
 {
-    float countsPerWheelRev = ENCODER_PULSES_PER_MOTOR_REV *
-                              ENCODER_COUNT_MULTIPLIER * ENCODER_GEAR_RATIO;
+    float countsPerWheelRev = ENCODER_COUNTS_PER_WHEEL_REV;
     if (sampleTimeS <= 0.0f) {
         return;
     }

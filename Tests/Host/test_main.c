@@ -145,7 +145,7 @@ static void Test_EncoderSpeedWindow_Fixed50MsAndAdaptive100Ms(void)
     EncoderSpeedWindow_t window;
     float rpm = 0.0f;
     bool ready = false;
-    const float countsPerWheelRev = 780.0f;
+    const float countsPerWheelRev = 450.0f;
 
     CHECK_TRUE(EncoderSpeedWindow_Init(&window) == STATUS_OK);
     CHECK_TRUE(EncoderSpeedWindow_Push(&window, 1, 0.01f, 0.05f,
@@ -178,9 +178,9 @@ static void Test_EncoderSpeedWindow_InvalidParameters(void)
     CHECK_TRUE(EncoderSpeedWindow_Init(NULL) == STATUS_INVALID_PARAM);
     CHECK_TRUE(EncoderSpeedWindow_Init(&window) == STATUS_OK);
     CHECK_TRUE(EncoderSpeedWindow_Push(NULL, 0, 0.01f, 0.05f,
-                                      780.0f, &rpm, &ready) == STATUS_INVALID_PARAM);
+                                      450.0f, &rpm, &ready) == STATUS_INVALID_PARAM);
     CHECK_TRUE(EncoderSpeedWindow_Push(&window, 0, 0.0f, 0.05f,
-                                      780.0f, &rpm, &ready) == STATUS_INVALID_PARAM);
+                                      450.0f, &rpm, &ready) == STATUS_INVALID_PARAM);
 }
 
 static void Test_EncoderDecode_X2RisingEdges(void)
