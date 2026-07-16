@@ -2,7 +2,7 @@
 
 比赛时只改四处：`empty.syscfg`、`User/user_config.h`、`User/task.c`、`User/test.c`。
 
-当前临时五路寻迹必须注意：**PA2 不接任何外设**；PCB 原 CH3 到 PA2 的连接要物理断开，再用杜邦线把 CH3 飞到 **PA15**；临时按键接 **PB2**，按下接 GND。PA2 属于地猛星板载 ROSC 相关电路，不能把 PA2 和 PA15 短接。
+当前循迹使用借用的亚博八路 MCU 灰度模块：模块 5V/GND 接主控 5V/GND，SDA 接 **PA28**，SCL 接 **PA31**。模块 I2C 地址为 `0x12`，读取寄存器 `0x30`。临时按键接 **PB2**，按下接 GND；PA2 仍属于地猛星板载 ROSC 相关电路，不接外设。
 
 ## 队员只需要认识四层
 
@@ -33,7 +33,7 @@ while (1) {
 - 编码器 A 相使用 PA17/TIMA1_C0、PB19/TIMG8_C1 捕获，B 相 PA16/PB20。
 - 串口惯导使用 UART2：PA21 TX、PA22 RX，115200 8N1。
 - ST7735S 1.8 寸 128×160 LCD：SPI1 PB9/PB8，CS/DC/RES/BL 为 PA27/PA26/PA25/PA24。
-- 临时五路数字寻迹：PA0、PA1、PA15、PB6、PB7；黑线极性由 `TRACK_BLACK_IS_HIGH` 切换。
+- 亚博八路 MCU 灰度模块：I2C0 PA28/PA31；地址 `0x12`、状态寄存器 `0x30`；黑线极性由 `TRACK_BLACK_IS_HIGH` 切换。
 
 完整引脚见 [docs/引脚资源分配表.md](docs/引脚资源分配表.md)。
 

@@ -43,6 +43,7 @@
 #define PIN_UART_DEBUG_IRQn               DEBUG_UART_INST_INT_IRQN
 #define PIN_UART_IMU_INST                 IMU_UART_INST
 #define PIN_UART_IMU_IRQn                 IMU_UART_INST_INT_IRQN
+#define PIN_TRACK_I2C_INST                TRACK_I2C_INST
 
 #define PIN_LCD_SPI_INST                  LCD_SPI_INST
 #define PIN_LCD_CS_PORT                   GPIO_A_PORT
@@ -53,16 +54,5 @@
 #define PIN_LCD_RES                       GPIO_A_LCD_RES_PIN
 #define PIN_LCD_BL_PORT                   GPIO_A_PORT
 #define PIN_LCD_BL                        GPIO_A_LCD_BL_PIN
-
-#define PIN_TRACK_CH1_PORT                GPIO_A_PORT
-#define PIN_TRACK_CH1                     GPIO_A_TRACK_CH1_PIN
-#define PIN_TRACK_CH2_PORT                GPIO_A_PORT
-#define PIN_TRACK_CH2                     GPIO_A_TRACK_CH2_PIN
-#define PIN_TRACK_CH3_PORT                GPIO_A_PORT
-#define PIN_TRACK_CH3                     GPIO_A_TRACK_CH3_PIN
-#define PIN_TRACK_CH4_PORT                GPIO_B_PORT
-#define PIN_TRACK_CH4                     GPIO_B_TRACK_CH4_PIN
-#define PIN_TRACK_CH5_PORT                GPIO_B_PORT
-#define PIN_TRACK_CH5                     GPIO_B_TRACK_CH5_PIN
 
 #endif

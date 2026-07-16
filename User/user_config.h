@@ -48,10 +48,12 @@
 #define UART_TX_TIMEOUT_LOOPS             200000U
 #define IMU_ONLINE_TIMEOUT_MS             200U
 
-/* 临时五路数字寻迹。黑线电平不确定时，只切换 1/0 后跑 TEST_TRACK。 */
-#define TRACK_CHANNEL_COUNT               5U
-#define TRACK_BLACK_IS_HIGH               1
-#define TRACK_FILTER_LENGTH               4U
+/* 亚博八路 MCU 灰度模块：I2C 地址/寄存器依据模块手册。 */
+#define TRACK_CHANNEL_COUNT               8U
+#define TRACK_I2C_ADDRESS                 0x12U
+#define TRACK_I2C_STATUS_REGISTER         0x30U
+#define TRACK_I2C_TIMEOUT_LOOPS           200000U
+#define TRACK_BLACK_IS_HIGH               0
 #define TRACK_ACTIVE_THRESHOLD            500U
 
 /* ST7735S。若上板出现整体偏移，只微调 OFFSET；颜色方向异常再改 MADCTL。 */

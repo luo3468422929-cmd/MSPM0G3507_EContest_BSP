@@ -1,5 +1,4 @@
 #include "test.h"
-
 #include "encoder.h"
 #include "imu.h"
 #include "key.h"
@@ -59,6 +58,7 @@ Test_Id_t Test_GetSelected(void)
 
 static void Test_RunKey(uint32_t nowMs)
 {
+    UART_SendString(UART_ID_DEBUG, "UART TEST\r\n");
     Key_Event_t event;
     Key_Scan(nowMs);
     event = Key_GetEvent();
@@ -77,9 +77,9 @@ static void Test_RunTrack(uint32_t nowMs)
     g_lastTickMs = nowMs;
     (void)Track_Update();
     data = Track_GetData();
-    (void)UART_Printf("TRACK mask=%02X error=%.2f polarity=%s\r\n",
+    (void)UART_Printf("TRACK mask=%02X error=%.2f i2c=%s\r\n",
         data->activeMask, (double)data->positionError,
-        TRACK_BLACK_IS_HIGH ? "HIGH" : "LOW");
+        data->communicationOk ? "OK" : "ERR");
 }
 
 static void Test_RunMotor(uint32_t nowMs)
@@ -126,6 +126,11 @@ static void Test_RunEncoder(uint32_t nowMs)
 static void Test_RunImu(uint32_t nowMs)
 {
     ImuSample_t sample;
+
+    if (g_firstRun) {
+        g_firstRun = false;
+        (void)LCD_Clear(LCD_COLOR_BLACK);
+    }
     IMU_Process(nowMs);
     if ((uint32_t)(nowMs - g_lastTickMs) < 100U) { return; }
     g_lastTickMs = nowMs;
@@ -133,8 +138,33 @@ static void Test_RunImu(uint32_t nowMs)
         (void)UART_Printf("IMU yaw=%.1f gyroZ=%.1f %s\r\n",
             (double)sample.yawDeg, (double)sample.gyroZDps,
             IMU_IsOnline(nowMs) ? "ONLINE" : "OFFLINE");
+        (void)LCD_ShowString(0U, 0U, "IMU TEST       ",
+                             LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+        (void)LCD_ShowString(0U, 24U, "YAW:",
+                             LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+        (void)LCD_ShowString(36U, 24U, "       ",
+                             LCD_COLOR_BLACK, LCD_COLOR_BLACK);
+        (void)LCD_ShowFloat(36U, 24U, sample.yawDeg, 1U,
+                            LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
+        (void)LCD_ShowString(0U, 48U, "GYRO Z:",
+                             LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+        (void)LCD_ShowString(48U, 48U, "       ",
+                             LCD_COLOR_BLACK, LCD_COLOR_BLACK);
+        (void)LCD_ShowFloat(48U, 48U, sample.gyroZDps, 1U,
+                            LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
+        (void)LCD_ShowString(0U, 72U,
+                             IMU_IsOnline(nowMs) ? "ONLINE " : "OFFLINE",
+                             LCD_COLOR_GREEN, LCD_COLOR_BLACK);
     } else {
         (void)UART_SendString(UART_ID_DEBUG, "IMU WAIT\r\n");
+        (void)LCD_ShowString(0U, 0U, "IMU TEST       ",
+                             LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+        (void)LCD_ShowString(0U, 24U, "IMU WAIT       ",
+                             LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
+        (void)LCD_ShowString(0U, 48U, "             ",
+                             LCD_COLOR_BLACK, LCD_COLOR_BLACK);
+        (void)LCD_ShowString(0U, 72U, "OFFLINE ",
+                             LCD_COLOR_RED, LCD_COLOR_BLACK);
     }
 }
 
@@ -147,7 +177,7 @@ static void Test_RunLcd(void)
     (void)LCD_Fill(32U, 0U, 63U, 31U, LCD_COLOR_GREEN);
     (void)LCD_Fill(64U, 0U, 95U, 31U, LCD_COLOR_BLUE);
     (void)LCD_Fill(96U, 0U, 127U, 31U, LCD_COLOR_WHITE);
-    (void)LCD_ShowString(34U, 48U, "LCD OK", LCD_COLOR_YELLOW,
+    (void)LCD_ShowString(34U, 48U, "codex nb", LCD_COLOR_YELLOW,
                          LCD_COLOR_BLACK);
     (void)LCD_ShowChinese16(8U, 96U, "\xE7\x94\xB5\xE8\xB5\x9B",
                             LCD_COLOR_YELLOW, LCD_COLOR_BLACK);

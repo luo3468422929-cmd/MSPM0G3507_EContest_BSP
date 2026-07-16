@@ -89,7 +89,7 @@ void CarControl_Update(void)
         return;
     }
     if (!g_data.lineFound) {
-        /* 临时五路模块丢线时先停车，比赛策略可在这里替换为找线动作。 */
+        /* 丢线或循迹通信失败时先停车，比赛策略可在这里替换为找线动作。 */
         g_data.targetLeftRpm = 0.0f;
         g_data.targetRightRpm = 0.0f;
         g_data.outputLeft = 0.0f;
