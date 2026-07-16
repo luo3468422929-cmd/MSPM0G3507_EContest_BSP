@@ -39,7 +39,9 @@ Require-NamedPin -Name 'MOTOR_AIN2' -Pin 'PA7'
 Require-NamedPin -Name 'MOTOR_BIN1' -Pin 'PA8'
 Require-NamedPin -Name 'MOTOR_BIN2' -Pin 'PA9'
 Require-NamedPin -Name 'MOTOR_STBY' -Pin 'PB24'
+Require-NamedPin -Name 'ENCODER_LEFT_A' -Pin 'PA17'
 Require-NamedPin -Name 'ENCODER_LEFT_B' -Pin 'PA16'
+Require-NamedPin -Name 'ENCODER_RIGHT_A' -Pin 'PB19'
 Require-NamedPin -Name 'ENCODER_RIGHT_B' -Pin 'PB20'
 Require-NamedPin -Name 'USER_KEY' -Pin 'PB2'
 Require-NamedPin -Name 'LCD_CS' -Pin 'PA27'
@@ -51,10 +53,10 @@ Require-Pattern 'PWM1\.peripheral\.ccp0Pin\.\$assign\s*=\s*"PA12"' `
     'left motor PWM must use PA12/TIMG0_C0'
 Require-Pattern 'PWM1\.peripheral\.ccp1Pin\.\$assign\s*=\s*"PA13"' `
     'right motor PWM must use PA13/TIMG0_C1'
-Require-Pattern 'CAPTURE1\.peripheral\.\$assign\s*=\s*"TIMA1"[\s\S]*?CAPTURE1\.peripheral\.ccp0Pin\.\$assign\s*=\s*"PA17"' `
-    'left encoder A must use PA17/TIMA1_C0'
-Require-Pattern 'CAPTURE2\.peripheral\.\$assign\s*=\s*"TIMG8"[\s\S]*?CAPTURE2\.peripheral\.ccp1Pin\.\$assign\s*=\s*"PB19"' `
-    'right encoder A must use PB19/TIMG8_C1'
+Require-Pattern 'GPIO1\.associatedPins\[\d+\]\.\$name\s*=\s*"ENCODER_LEFT_A"[\s\S]*?interruptEn\s*=\s*true[\s\S]*?polarity\s*=\s*"RISE"[\s\S]*?pin\.\$assign\s*=\s*"PA17"' `
+    'left encoder A must use PA17 GPIO rising interrupt'
+Require-Pattern 'GPIO2\.associatedPins\[\d+\]\.\$name\s*=\s*"ENCODER_RIGHT_A"[\s\S]*?interruptEn\s*=\s*true[\s\S]*?polarity\s*=\s*"RISE"[\s\S]*?pin\.\$assign\s*=\s*"PB19"' `
+    'right encoder A must use PB19 GPIO rising interrupt'
 Require-Pattern 'UART2\.peripheral\.\$assign\s*=\s*"UART2"[\s\S]*?UART2\.peripheral\.(?:(?:txPin\.\$assign\s*=\s*"PA21"[\s\S]*?rxPin\.\$assign\s*=\s*"PA22")|(?:rxPin\.\$assign\s*=\s*"PA22"[\s\S]*?txPin\.\$assign\s*=\s*"PA21"))' `
     'IMU must use UART2 TX=PA21 RX=PA22'
 

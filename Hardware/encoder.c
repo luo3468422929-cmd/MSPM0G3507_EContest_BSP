@@ -26,12 +26,10 @@ Status_t Encoder_Init(void)
     for (uint8_t id = 0U; id < (uint8_t)ENCODER_COUNT; ++id) {
         Encoder_Reset((Encoder_Id_t)id);
     }
-    NVIC_ClearPendingIRQ(PIN_ENCODER_LEFT_CAPTURE_IRQn);
-    NVIC_EnableIRQ(PIN_ENCODER_LEFT_CAPTURE_IRQn);
-    NVIC_ClearPendingIRQ(PIN_ENCODER_RIGHT_CAPTURE_IRQn);
-    NVIC_EnableIRQ(PIN_ENCODER_RIGHT_CAPTURE_IRQn);
-    DL_TimerA_startCounter(PIN_ENCODER_LEFT_CAPTURE_INST);
-    DL_TimerG_startCounter(PIN_ENCODER_RIGHT_CAPTURE_INST);
+    NVIC_ClearPendingIRQ(PIN_ENCODER_GPIOA_IRQn);
+    NVIC_EnableIRQ(PIN_ENCODER_GPIOA_IRQn);
+    NVIC_ClearPendingIRQ(PIN_ENCODER_GPIOB_IRQn);
+    NVIC_EnableIRQ(PIN_ENCODER_GPIOB_IRQn);
     return STATUS_OK;
 }
 
@@ -123,18 +121,21 @@ static void Encoder_HandleRightEdge(void)
     Encoder_OnEdge(ENCODER_RIGHT, phaseAHigh, phaseBHigh);
 }
 
-void TIMA1_IRQHandler(void)
+void GROUP1_IRQHandler(void)
 {
-    if (DL_TimerA_getPendingInterrupt(PIN_ENCODER_LEFT_CAPTURE_INST) ==
-        DL_TIMERA_IIDX_CC0_DN) {
-        Encoder_HandleLeftEdge();
-    }
-}
+    uint32_t gpioAStatus = DL_GPIO_getEnabledInterruptStatus(
+        PIN_ENCODER_LEFT_A_PORT, PIN_ENCODER_LEFT_A);
+    uint32_t gpioBStatus = DL_GPIO_getEnabledInterruptStatus(
+        PIN_ENCODER_RIGHT_A_PORT, PIN_ENCODER_RIGHT_A);
 
-void TIMG8_IRQHandler(void)
-{
-    if (DL_TimerG_getPendingInterrupt(PIN_ENCODER_RIGHT_CAPTURE_INST) ==
-        DL_TIMERG_IIDX_CC1_DN) {
+    if (gpioAStatus != 0U) {
+        Encoder_HandleLeftEdge();
+        DL_GPIO_clearInterruptStatus(PIN_ENCODER_LEFT_A_PORT,
+                                     PIN_ENCODER_LEFT_A);
+    }
+    if (gpioBStatus != 0U) {
         Encoder_HandleRightEdge();
+        DL_GPIO_clearInterruptStatus(PIN_ENCODER_RIGHT_A_PORT,
+                                     PIN_ENCODER_RIGHT_A);
     }
 }

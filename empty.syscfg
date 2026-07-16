@@ -9,9 +9,6 @@
 /**
  * Import the modules used in this configuration.
  */
-const CAPTURE  = scripting.addModule("/ti/driverlib/CAPTURE", {}, false);
-const CAPTURE1 = CAPTURE.addInstance();
-const CAPTURE2 = CAPTURE.addInstance();
 const GPIO     = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIO1    = GPIO.addInstance();
 const GPIO2    = GPIO.addInstance();
@@ -30,32 +27,10 @@ const UART2    = UART.addInstance();
 /**
  * Write custom configuration values to the imported modules.
  */
-CAPTURE1.$name                              = "ENCODER_LEFT_CAPTURE";
-CAPTURE1.timerClkPrescale                   = 32;
-CAPTURE1.timerPeriod                        = "2 ms";
-CAPTURE1.captEdgeDetection                  = "EDGE";
-CAPTURE1.interrupts                         = ["CC0_DN"];
-CAPTURE1.peripheral.$assign                 = "TIMA1";
-CAPTURE1.peripheral.ccp0Pin.$assign         = "PA17";
-CAPTURE1.ccp0PinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric0";
-CAPTURE1.ccp0PinConfig.hideOutputInversion  = scripting.forceWrite(false);
-CAPTURE1.ccp0PinConfig.onlyInternalResistor = scripting.forceWrite(false);
-CAPTURE1.ccp0PinConfig.passedPeripheralType = scripting.forceWrite("Digital");
-
 const Board                       = scripting.addModule("/ti/driverlib/Board", {}, false);
 Board.peripheral.$assign          = "DEBUGSS";
 Board.peripheral.swclkPin.$assign = "PA20";
 Board.peripheral.swdioPin.$assign = "PA19";
-
-CAPTURE2.$name                      = "ENCODER_RIGHT_CAPTURE";
-CAPTURE2.timerClkPrescale           = 32;
-CAPTURE2.timerPeriod                = "2 ms";
-CAPTURE2.captEdgeDetection          = "EDGE";
-CAPTURE2.ccIndex                    = 1;
-CAPTURE2.interrupts                 = ["CC1_DN"];
-CAPTURE2.peripheral.$assign         = "TIMG8";
-CAPTURE2.peripheral.ccp1Pin.$assign = "PB19";
-CAPTURE2.ccp1PinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric1";
 
 GPIO1.$name                          = "GPIO_A";
 GPIO1.port                           = "PORTA";
@@ -90,10 +65,16 @@ GPIO1.associatedPins[7].pin.$assign  = "PA25";
 GPIO1.associatedPins[8].$name        = "LCD_BL";
 GPIO1.associatedPins[8].assignedPin  = "24";
 GPIO1.associatedPins[8].pin.$assign  = "PA24";
+GPIO1.associatedPins[9].$name        = "ENCODER_LEFT_A";
+GPIO1.associatedPins[9].direction    = "INPUT";
+GPIO1.associatedPins[9].interruptEn  = true;
+GPIO1.associatedPins[9].polarity     = "RISE";
+GPIO1.associatedPins[9].assignedPin  = "17";
+GPIO1.associatedPins[9].pin.$assign  = "PA17";
 
 GPIO2.$name                              = "GPIO_B";
 GPIO2.port                               = "PORTB";
-GPIO2.associatedPins.create(4);
+GPIO2.associatedPins.create(5);
 GPIO2.associatedPins[0].$name            = "MOTOR_AIN1";
 GPIO2.associatedPins[0].assignedPin      = "18";
 GPIO2.associatedPins[0].pin.$assign      = "PB18";
@@ -109,6 +90,12 @@ GPIO2.associatedPins[3].direction        = "INPUT";
 GPIO2.associatedPins[3].internalResistor = "PULL_UP";
 GPIO2.associatedPins[3].assignedPin      = "2";
 GPIO2.associatedPins[3].pin.$assign      = "PB2";
+GPIO2.associatedPins[4].$name            = "ENCODER_RIGHT_A";
+GPIO2.associatedPins[4].direction        = "INPUT";
+GPIO2.associatedPins[4].interruptEn      = true;
+GPIO2.associatedPins[4].polarity         = "RISE";
+GPIO2.associatedPins[4].assignedPin      = "19";
+GPIO2.associatedPins[4].pin.$assign      = "PB19";
 
 PWM1.$name                              = "MOTOR_PWM";
 PWM1.pwmMode                            = "EDGE_ALIGN_UP";
