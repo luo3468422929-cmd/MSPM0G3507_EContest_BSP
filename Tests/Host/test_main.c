@@ -11,6 +11,7 @@
 #include "pid.h"
 #include "ring_buffer.h"
 #include "track_math.h"
+#include "encoder_speed_window.h"
 
 static int g_failures;
 
@@ -138,6 +139,49 @@ static void Test_TrackMath_FiveChannels(void)
     CHECK_NEAR(TrackMath_WeightedPosition(0x18U, weights, 5U), 3.0f, 0.0001f);
 }
 
+static void Test_EncoderSpeedWindow_Fixed50MsAndAdaptive100Ms(void)
+{
+    EncoderSpeedWindow_t window;
+    float rpm = 0.0f;
+    bool ready = false;
+    const float countsPerWheelRev = 780.0f;
+
+    CHECK_TRUE(EncoderSpeedWindow_Init(&window) == STATUS_OK);
+    CHECK_TRUE(EncoderSpeedWindow_Push(&window, 1, 0.01f, 0.05f,
+                                      countsPerWheelRev, &rpm, &ready) == STATUS_OK);
+    CHECK_TRUE(!ready);
+    for (uint8_t index = 0U; index < 4U; ++index) {
+        CHECK_TRUE(EncoderSpeedWindow_Push(&window, 0, 0.01f, 0.05f,
+                                          countsPerWheelRev, &rpm, &ready) == STATUS_OK);
+    }
+    CHECK_TRUE(ready);
+    CHECK_NEAR(rpm, 60.0f / (countsPerWheelRev * 0.05f), 0.0001f);
+
+    CHECK_TRUE(EncoderSpeedWindow_Push(&window, 0, 0.01f, 0.05f,
+                                      countsPerWheelRev, &rpm, &ready) == STATUS_OK);
+    CHECK_TRUE(ready);
+    CHECK_NEAR(rpm, 60.0f / (countsPerWheelRev * 0.05f), 0.0001f);
+
+    CHECK_TRUE(EncoderSpeedWindow_Init(&window) == STATUS_OK);
+    CHECK_TRUE(EncoderSpeedWindow_Push(&window, 4, 0.1f, 0.05f,
+                                      countsPerWheelRev, &rpm, &ready) == STATUS_OK);
+    CHECK_TRUE(ready);
+    CHECK_NEAR(rpm, 4.0f * 60.0f / (countsPerWheelRev * 0.1f), 0.0001f);
+}
+
+static void Test_EncoderSpeedWindow_InvalidParameters(void)
+{
+    EncoderSpeedWindow_t window;
+    float rpm = 0.0f;
+    bool ready = false;
+    CHECK_TRUE(EncoderSpeedWindow_Init(NULL) == STATUS_INVALID_PARAM);
+    CHECK_TRUE(EncoderSpeedWindow_Init(&window) == STATUS_OK);
+    CHECK_TRUE(EncoderSpeedWindow_Push(NULL, 0, 0.01f, 0.05f,
+                                      780.0f, &rpm, &ready) == STATUS_INVALID_PARAM);
+    CHECK_TRUE(EncoderSpeedWindow_Push(&window, 0, 0.0f, 0.05f,
+                                      780.0f, &rpm, &ready) == STATUS_INVALID_PARAM);
+}
+
 int main(void)
 {
     Test_PID_PositionAndLimits();
@@ -148,6 +192,8 @@ int main(void)
     Test_FrameProtocol_VariableLengthAndChecksum();
     Test_TrackMath_PositionAndLost();
     Test_TrackMath_FiveChannels();
+    Test_EncoderSpeedWindow_Fixed50MsAndAdaptive100Ms();
+    Test_EncoderSpeedWindow_InvalidParameters();
     if (g_failures == 0) {
         puts("ALL HOST TESTS PASSED");
         return 0;

@@ -1,6 +1,7 @@
 #include "encoder.h"
 
 #include "board_pins.h"
+#include "encoder_speed_window.h"
 #include "user_config.h"
 
 #define PI_F 3.14159265358979323846f
@@ -8,6 +9,7 @@
 typedef struct {
     volatile int32_t count;
     int32_t previousCount;
+    EncoderSpeedWindow_t speedWindow;
     Encoder_Data_t data;
     bool speedInitialized;
 } Encoder_State_t;
@@ -56,10 +58,20 @@ void Encoder_UpdateSpeed(float sampleTimeS)
     for (uint8_t id = 0U; id < (uint8_t)ENCODER_COUNT; ++id) {
         int32_t count = g_encoder[id].count;
         int32_t delta = count - g_encoder[id].previousCount;
-        float rpm = ((float)delta * 60.0f) / (countsPerWheelRev * sampleTimeS);
+        float rpm = 0.0f;
+        bool ready = false;
+
         g_encoder[id].previousCount = count;
         g_encoder[id].data.totalCount = count;
         g_encoder[id].data.deltaCount = delta;
+        if ((EncoderSpeedWindow_Push(&g_encoder[id].speedWindow,
+                                     delta, sampleTimeS,
+                                     ENCODER_SPEED_WINDOW_S,
+                                     countsPerWheelRev, &rpm, &ready) !=
+             STATUS_OK) || !ready) {
+            /* 时间窗未满时保留上一次有效速度，避免启动瞬间误放大。 */
+            continue;
+        }
         if (!g_encoder[id].speedInitialized) {
             g_encoder[id].data.rpm = rpm;
             g_encoder[id].speedInitialized = true;
@@ -88,6 +100,7 @@ void Encoder_Reset(Encoder_Id_t id)
     }
     g_encoder[id].count = 0;
     g_encoder[id].previousCount = 0;
+    (void)EncoderSpeedWindow_Init(&g_encoder[id].speedWindow);
     g_encoder[id].data = (Encoder_Data_t){0};
     g_encoder[id].speedInitialized = false;
 }

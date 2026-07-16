@@ -41,6 +41,7 @@
 #define ENCODER_COUNT_MULTIPLIER          2.0f
 #define ENCODER_GEAR_RATIO                30.0f
 #define ENCODER_WHEEL_DIAMETER_M          0.065f
+#define ENCODER_SPEED_WINDOW_S            0.05f
 #define ENCODER_SPEED_FILTER_ALPHA        0.35f
 
 /* UART 与惯导。 */
