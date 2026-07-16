@@ -67,9 +67,10 @@ Status_t Task_Init(void)
     if (status != STATUS_OK) { return status; }
     g_state = TASK_WAIT_START;
     Scheduler_Init(Timer_GetTickMs());
-    Test_Select(TEST_NONE); /* 单模块调试时只改这里，例如 TEST_TRACK。 */
+    Test_Select(TEST_ENCODER); /* 单模块调试时只改这里，例如 TEST_TRACK。 */
     return STATUS_OK;
 }
+
 
 void Task_Run(void)
 {
