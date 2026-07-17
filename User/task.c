@@ -10,6 +10,7 @@
 #include "lcd.h"
 #include "led.h"
 #include "scheduler.h"
+#include "task_safety.h"
 #include "test.h"
 #include "timer.h"
 #include "track.h"
@@ -68,7 +69,8 @@ static void Task_EmergencyStop(void)
 static void Task_UpdateArming(uint32_t nowMs, Status_t trackStatus)
 {
     const Track_Data_t *track = Track_GetData();
-    bool frameReady = (trackStatus == STATUS_OK) &&
+    bool frameReady = !Key_IsPressed() &&
+                      (trackStatus == STATUS_OK) &&
                       track->communicationOk && track->lineFound;
 
     if (frameReady) {
@@ -221,6 +223,7 @@ void Task_Run(void)
     uint32_t nowMs = Timer_GetTickMs();
     Key_Event_t event = KEY_EVENT_NONE;
     Test_Id_t selected;
+    bool motorContext;
 
     /* 按键只在这里扫描一次，再把同一事件交给测试或正常状态机。 */
 #if CONFIG_KEY_ENABLE
@@ -231,9 +234,12 @@ void Task_Run(void)
 #endif
 
     selected = Test_GetSelected();
-    if (((g_state == TASK_ARMING) || (g_state == TASK_RUNNING) ||
-         Test_UsesMotor(selected)) &&
-        (event == KEY_EVENT_PRESSED)) {
+    motorContext = (g_state == TASK_ARMING) ||
+                   (g_state == TASK_RUNNING) ||
+                   Test_UsesMotor(selected);
+    if (TaskSafety_ShouldStop(motorContext,
+                              event == KEY_EVENT_PRESSED,
+                              Key_IsPressed())) {
         Task_EmergencyStop();
         return;
     }

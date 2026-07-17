@@ -6,6 +6,7 @@ $ringSource = Get-Content -LiteralPath (Join-Path $project 'Bsp\ring_buffer.c') 
 $uartSource = Get-Content -LiteralPath (Join-Path $project 'Bsp\uart.c') -Raw
 $i2cSource = Get-Content -LiteralPath (Join-Path $project 'Bsp\i2c.c') -Raw
 $scheduler = Get-Content -LiteralPath (Join-Path $project 'Control\scheduler.c') -Raw
+$carSource = Get-Content -LiteralPath (Join-Path $project 'Control\car_control.c') -Raw
 $config = Get-Content -LiteralPath (Join-Path $project 'User\user_config.h') -Raw
 
 if ($ringHeader -match 'volatile\s+uint16_t\s+count') {
@@ -29,6 +30,21 @@ if ($config -notmatch '#define\s+I2C_RECOVERY_RETRY_COUNT\s+1U') {
 if ($scheduler -notmatch 'g_lastRunMs\[task\]\s*=\s*nowMs' -or
     $scheduler -match 'g_lastRunMs\[task\]\s*\+=') {
     throw 'Scheduler must skip missed slots instead of burst catch-up'
+}
+
+$updateMatch = [regex]::Match(
+    $carSource,
+    'void\s+CarControl_Update\(uint32_t\s+nowMs\)\s*\{([\s\S]*?)\n\}',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if (-not $updateMatch.Success) {
+    throw 'CarControl_Update body was not found'
+}
+$updateBody = $updateMatch.Groups[1].Value
+$encoderPosition = $updateBody.IndexOf('CarControl_UpdateEncoder(nowMs)')
+$trackPosition = $updateBody.IndexOf('(void)Track_Update()')
+if (($encoderPosition -lt 0) -or ($trackPosition -lt 0) -or
+    ($encoderPosition -gt $trackPosition)) {
+    throw 'Encoder timing must be sampled before a potentially blocking I2C track read'
 }
 
 Write-Output 'RUNTIME HARDENING CHECK PASSED'

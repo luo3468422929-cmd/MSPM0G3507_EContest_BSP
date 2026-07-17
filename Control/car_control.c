@@ -138,9 +138,14 @@ void CarControl_Update(uint32_t nowMs)
     Encoder_Data_t right = {0};
     const Track_Data_t *track;
 
-    (void)Track_Update();
+    /*
+     * 先用本轮入口时间更新编码器，再执行可能阻塞并重试的 I2C 循迹读取。
+     * 这样 I2C 超时不会让本次编码器 dt 偏小、瞬间 RPM 虚高；阻塞经过的
+     * 时间会自然计入下一轮的真实 dt。
+     */
     CarControl_UpdateEncoder(nowMs);
     CarControl_ReadEncoderData(&left, &right);
+    (void)Track_Update();
     track = Track_GetData();
 
     g_data.positionError = track->positionError;

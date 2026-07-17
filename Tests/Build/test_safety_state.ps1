@@ -29,9 +29,17 @@ if ($testSource -match '\bKey_Scan\s*\(' -or
     throw 'Test module must not scan/read the key independently'
 }
 if ($task -notmatch 'KEY_EVENT_PRESSED' -or
+    $task -notmatch 'Key_IsPressed\(\)' -or
     $task -notmatch 'Test_UsesMotor' -or
     $task -notmatch 'Board_EmergencyStop\(\)') {
-    throw 'Running and motor-test modes must share the fast emergency-stop path'
+    throw 'Running and motor-test modes must check both key events and held level'
+}
+if ($task -notmatch 'TaskSafety_ShouldStop' -or
+    $task -notmatch 'frameReady\s*=\s*!Key_IsPressed\(\)') {
+    throw 'Arming must reject a key held before reset and use tested safety logic'
+}
+if ($testSource -notmatch 'case\s+TEST_MOTOR:[\s\S]*?CONFIG_KEY_ENABLE') {
+    throw 'Motor test must require the emergency-stop key module'
 }
 if ($config -notmatch '#define\s+MOTOR_TEST_RUN_MS\s+5000U') {
     throw 'Open-loop motor test must default to a short five-second direction interval'

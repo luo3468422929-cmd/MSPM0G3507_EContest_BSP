@@ -22,16 +22,33 @@ $ErrorActionPreference = 'Stop'
 & (Join-Path (Split-Path -Parent $PSScriptRoot) 'Host\run_tests.ps1')
 
 $project = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$sdk = 'C:\TI\mspm0_sdk_2_10_00_04'
-$sysconfig = 'C:\TI\sysconfig_1.26.2\sysconfig_cli.bat'
+$sdk = if (-not [string]::IsNullOrWhiteSpace($env:MSPM0_SDK_ROOT)) {
+    $env:MSPM0_SDK_ROOT
+} else {
+    'C:\TI\mspm0_sdk_2_10_00_04'
+}
+$sysconfig = if (-not [string]::IsNullOrWhiteSpace($env:SYSCONFIG_CLI)) {
+    $env:SYSCONFIG_CLI
+} else {
+    'C:\TI\sysconfig_1.26.2\sysconfig_cli.bat'
+}
+if (-not (Test-Path -LiteralPath (Join-Path $sdk '.metadata\product.json'))) {
+    throw "MSPM0 SDK not found. Set MSPM0_SDK_ROOT: $sdk"
+}
+if (-not (Test-Path -LiteralPath $sysconfig)) {
+    throw "SysConfig CLI not found. Set SYSCONFIG_CLI: $sysconfig"
+}
 $vscodeConfig = Get-Content -LiteralPath `
     (Join-Path $project '.vscode\c_cpp_properties.json') -Raw |
     ConvertFrom-Json
 $configuredCompiler = $vscodeConfig.configurations[0].compilerPath
-$compilerCandidates = @(
-    $configuredCompiler
-    'C:\TI\ti_cgt_arm_llvm_4.0.2.LTS\bin\tiarmclang.exe'
-)
+$compilerCandidates = @()
+if (-not [string]::IsNullOrWhiteSpace($env:TI_ARM_CLANG)) {
+    $compilerCandidates += $env:TI_ARM_CLANG
+}
+$compilerCandidates += @(
+    $configuredCompiler,
+    'C:\TI\ti_cgt_arm_llvm_4.0.2.LTS\bin\tiarmclang.exe')
 $compiler = $compilerCandidates |
     Where-Object { Test-Path -LiteralPath $_ } |
     Select-Object -First 1

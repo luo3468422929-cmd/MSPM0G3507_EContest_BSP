@@ -17,7 +17,7 @@
 - 编码器：PA17/PA16、PB19/PB20 均为 GPIO 输入、内部上拉、上升沿中断。
 - UART0 调试：PA10 TX、PA11 RX，115200 RX 中断，板载 CH340。
 - UART2 惯导：PA21 TX、PA22 RX，115200 RX 中断。
-- I2C0 循迹：PA28 SDA、PA31 SCL，Fast 400 kHz。
+- I2C0 循迹：PA28 SDA、PA31 SCL，Fast 400 kHz；内部上拉关闭，使用上拉到 3.3 V 的板载/外部电阻。
 - SPI1 LCD：PB9 SCK、PB8 MOSI，4 MHz，CPOL=1、CPHA=1。
 - LCD 控制：PA27 CS、PA26 DC、PA25 RES；BL 直连 3.3 V。
 - SysTick：1 ms。
@@ -32,3 +32,5 @@
 ## 换一种器件
 
 先在 SysConfig 建立总线和控制脚，再在 `Hardware` 增加驱动。若能保持现有公共接口（例如继续提供 `Track_Update()` / `Track_GetData()`），`Control` 和比赛状态机可以不随协议变化。
+
+I2C 总线换引脚后必须重新确认上拉。模块无板载上拉时，SDA、SCL 各用约 4.7 kΩ 上拉到 3.3 V；不要上拉到 5 V。

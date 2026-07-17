@@ -11,6 +11,7 @@
 #include "pid.h"
 #include "ring_buffer.h"
 #include "scheduler.h"
+#include "task_safety.h"
 #include "track_math.h"
 #include "encoder_decode.h"
 #include "encoder_speed_window.h"
@@ -161,6 +162,18 @@ static void Test_Scheduler_SkipsMissedPeriods(void)
     CHECK_TRUE(Scheduler_IsDue(SCHEDULER_TASK_10_MS, 45U));
 }
 
+static void Test_TaskSafety_HeldKeyStopsBeforeStartup(void)
+{
+    /*
+     * 上电前一直按住按键时，消抖模块不会产生新的“按下事件”。
+     * 因此电机上下文必须同时检查实时按键电平，不能只依赖事件。
+     */
+    CHECK_TRUE(TaskSafety_ShouldStop(true, false, true));
+    CHECK_TRUE(TaskSafety_ShouldStop(true, true, false));
+    CHECK_TRUE(!TaskSafety_ShouldStop(true, false, false));
+    CHECK_TRUE(!TaskSafety_ShouldStop(false, true, true));
+}
+
 static void Test_EncoderSpeedWindow_Fixed50MsAndAdaptive100Ms(void)
 {
     EncoderSpeedWindow_t window;
@@ -271,6 +284,7 @@ int main(void)
     Test_Filter_MovingAverage();
     Test_RingBuffer_WrapAndOverflow();
     Test_Scheduler_SkipsMissedPeriods();
+    Test_TaskSafety_HeldKeyStopsBeforeStartup();
     Test_ImuProtocol_ValidAndResync();
     Test_FrameProtocol_VariableLengthAndChecksum();
     Test_TrackMath_PositionAndLost();

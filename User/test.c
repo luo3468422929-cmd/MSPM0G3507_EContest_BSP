@@ -61,6 +61,7 @@ static bool Test_IsAvailable(Test_Id_t id)
         case TEST_MOTOR:
             return (CONFIG_MOTOR_ENABLE != 0) &&
                    (CONFIG_ENCODER_ENABLE != 0) &&
+                   (CONFIG_KEY_ENABLE != 0) &&
                    (CONFIG_UART_ENABLE != 0);
         case TEST_PID:
             return (CONFIG_CAR_CONTROL_ENABLE != 0) &&
