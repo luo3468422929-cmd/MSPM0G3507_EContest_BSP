@@ -26,13 +26,19 @@
 #define KEY_ACTIVE_LOW                    1
 #define KEY_DEBOUNCE_MS                   20U
 #define KEY_LONG_PRESS_MS                 800U
+#define AUTO_START_ON_BOOT                1     /* 正常模式上电后自动进入 RUN。 */
 
 /* TB6612 和电机。方向不一致时只改 REVERSED，不改 motor.c。 */
 #define MOTOR_MAX_DUTY                    1000
 #define MOTOR_MIN_START_DUTY              80
 #define MOTOR_RAMP_STEP                   40
+#define MOTOR_TEST_DUTY                   120  /* 低占空比开环编码器诊断 PWM。 */
+#define MOTOR_TEST_RUN_MS                30000U /* 每个方向持续 30 秒，便于观察异常。 */
+#define MOTOR_TEST_STOP_MS                1000U /* 正反转之间的停车时间。 */
 #define MOTOR_LEFT_REVERSED               0
-#define MOTOR_RIGHT_REVERSED              0
+#define MOTOR_RIGHT_REVERSED              1
+#define PID_TEST_TARGET_RPM               40.0f /* 独立速度环测试目标。 */
+#define PID_TEST_VOFA_ENABLE              1     /* 输出 FireWater CSV 调参帧。 */
 
 /* 编码器与轮组机械参数。 */
 #define ENCODER_LEFT_REVERSED             0
@@ -44,6 +50,7 @@
 #define ENCODER_WHEEL_DIAMETER_M          0.065f
 #define ENCODER_SPEED_WINDOW_S            0.05f
 #define ENCODER_SPEED_FILTER_ALPHA        0.35f
+#define ENCODER_VERIFY_TURNS              10U   /* 人工校验时输出轴转动圈数。 */
 
 /* UART 与惯导。 */
 #define UART_RX_BUFFER_SIZE               128U
@@ -66,6 +73,6 @@
 
 /* 10 ms 控制周期及默认速度。 */
 #define CONTROL_SAMPLE_TIME_S             0.010f
-#define CAR_DEFAULT_BASE_SPEED_RPM        80.0f
+#define CAR_DEFAULT_BASE_SPEED_RPM        30.0f
 
 #endif

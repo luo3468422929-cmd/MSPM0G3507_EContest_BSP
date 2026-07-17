@@ -36,6 +36,7 @@ static void Motor_Apply(Motor_Id_t id, int16_t duty)
     uint32_t compareIndex = (id == MOTOR_LEFT) ?
                             PIN_MOTOR_LEFT_CC_INDEX : PIN_MOTOR_RIGHT_CC_INDEX;
     bool reversed = (id == MOTOR_LEFT) ? MOTOR_LEFT_REVERSED : MOTOR_RIGHT_REVERSED;
+    int16_t logicalDuty = duty;
     int16_t magnitude;
     if (reversed) {
         duty = (int16_t)-duty;
@@ -51,7 +52,8 @@ static void Motor_Apply(Motor_Id_t id, int16_t duty)
         magnitude = 0;
     }
     DL_TimerG_setCaptureCompareValue(PIN_MOTOR_PWM_INST, (uint32_t)magnitude, compareIndex);
-    g_motor[id].appliedDuty = duty;
+    /* 斜坡状态保存逻辑占空比，不能保存方向翻转后的物理占空比。 */
+    g_motor[id].appliedDuty = logicalDuty;
 }
 
 Status_t Motor_Init(void)

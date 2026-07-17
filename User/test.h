@@ -9,6 +9,7 @@ typedef enum {
     TEST_KEY,
     TEST_TRACK,
     TEST_MOTOR,
+    TEST_PID,
     TEST_ENCODER,
     TEST_IMU,
     TEST_LCD

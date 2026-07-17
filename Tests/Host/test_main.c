@@ -13,6 +13,7 @@
 #include "track_math.h"
 #include "encoder_decode.h"
 #include "encoder_speed_window.h"
+#include "encoder_verification.h"
 
 static int g_failures;
 
@@ -200,6 +201,48 @@ static void Test_EncoderDecode_X2RisingEdges(void)
                                           false, false) == 0);
 }
 
+static void Test_EncoderVerification_ManualTenTurns(void)
+{
+    EncoderVerification_t verification;
+    float leftCountsPerRev = 0.0f;
+    float rightCountsPerRev = 0.0f;
+    float averageRpm = 0.0f;
+
+    CHECK_TRUE(EncoderVerification_Init(&verification, 10U) == STATUS_OK);
+    CHECK_TRUE(EncoderVerification_Start(&verification, 100, -200, 1000U) ==
+               STATUS_OK);
+    CHECK_TRUE(verification.active);
+    CHECK_TRUE(EncoderVerification_Finish(&verification, 4600, -4700,
+                                          4000U, &leftCountsPerRev,
+                                          &rightCountsPerRev, &averageRpm) ==
+               STATUS_OK);
+    CHECK_TRUE(!verification.active);
+    CHECK_NEAR(leftCountsPerRev, 450.0f, 0.0001f);
+    CHECK_NEAR(rightCountsPerRev, 450.0f, 0.0001f);
+    CHECK_NEAR(averageRpm, 200.0f, 0.0001f);
+    CHECK_TRUE(verification.hasResult);
+    CHECK_NEAR(verification.countsPerRev[0], 450.0f, 0.0001f);
+    CHECK_NEAR(verification.countsPerRev[1], 450.0f, 0.0001f);
+    CHECK_NEAR(verification.averageRpm, 200.0f, 0.0001f);
+}
+
+static void Test_EncoderVerification_InvalidParameters(void)
+{
+    EncoderVerification_t verification;
+    float countsPerRev = 0.0f;
+    float averageRpm = 0.0f;
+
+    CHECK_TRUE(EncoderVerification_Init(NULL, 10U) == STATUS_INVALID_PARAM);
+    CHECK_TRUE(EncoderVerification_Init(&verification, 0U) ==
+               STATUS_INVALID_PARAM);
+    CHECK_TRUE(EncoderVerification_Init(&verification, 10U) == STATUS_OK);
+    CHECK_TRUE(EncoderVerification_Start(&verification, 0, 0, 100U) ==
+               STATUS_OK);
+    CHECK_TRUE(EncoderVerification_Finish(&verification, 100, 0, 100U,
+                                          &countsPerRev, &countsPerRev,
+                                          &averageRpm) == STATUS_INVALID_PARAM);
+}
+
 int main(void)
 {
     Test_PID_PositionAndLimits();
@@ -213,6 +256,8 @@ int main(void)
     Test_EncoderSpeedWindow_Fixed50MsAndAdaptive100Ms();
     Test_EncoderSpeedWindow_InvalidParameters();
     Test_EncoderDecode_X2RisingEdges();
+    Test_EncoderVerification_ManualTenTurns();
+    Test_EncoderVerification_InvalidParameters();
     if (g_failures == 0) {
         puts("ALL HOST TESTS PASSED");
         return 0;

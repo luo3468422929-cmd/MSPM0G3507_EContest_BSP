@@ -4,6 +4,8 @@ $ErrorActionPreference = 'Stop'
 & (Join-Path $PSScriptRoot 'test_encoder_gpio_irq.ps1')
 & (Join-Path $PSScriptRoot 'test_encoder_x2_irq.ps1')
 & (Join-Path $PSScriptRoot 'test_encoder_calibration.ps1')
+& (Join-Path $PSScriptRoot 'test_motor_reverse_state.ps1')
+& (Join-Path $PSScriptRoot 'test_pid_mode.ps1')
 & (Join-Path $PSScriptRoot 'test_eight_track_i2c.ps1')
 & (Join-Path $PSScriptRoot 'test_lcd_api.ps1')
 & (Join-Path $PSScriptRoot 'test_lcd_font_bitmap_api.ps1')

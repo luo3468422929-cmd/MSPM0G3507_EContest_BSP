@@ -65,9 +65,13 @@ Status_t Task_Init(void)
 {
     Status_t status = CarControl_Init();
     if (status != STATUS_OK) { return status; }
-    g_state = TASK_WAIT_START;
+    g_state = (AUTO_START_ON_BOOT != 0) ? TASK_RUNNING : TASK_WAIT_START;
     Scheduler_Init(Timer_GetTickMs());
-    Test_Select(TEST_ENCODER); /* 单模块调试时只改这里，例如 TEST_TRACK。 */
+    Test_Select(TEST_NONE); /* 单模块调试时改为 TEST_TRACK/TEST_PID 等。 */
+    if (g_state == TASK_RUNNING) {
+        CarControl_Enable(true);
+        LED_Set(true);
+    }
     return STATUS_OK;
 }
 
