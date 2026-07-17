@@ -1,0 +1,4 @@
+# 所有源码、配置和文档的最终审核人。
+# main 分支保护规则开启“Require review from Code Owners”后，
+# 队友的 Pull Request 必须由该账号审核才能合并。
+* @luo3468422929-cmd
