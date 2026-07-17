@@ -1,7 +1,15 @@
+/**
+ * @file frame_protocol.c
+ * @brief 实现 AA55 命令帧的逐字节状态机、自动重同步和累加和校验。
+ *
+ * 所属层：Bsp 纯协议工具，不访问 UART 或 DriverLib。每收到一个字节调用
+ * PushByte，只有返回 STATUS_OK 后才有完整帧可取。
+ */
 #include "frame_protocol.h"
 
 #include <string.h>
 
+/** 解析阶段；状态值保存在 FrameProtocol_t.state 中。 */
 enum {
     FRAME_WAIT_AA = 0,
     FRAME_WAIT_55,
@@ -31,6 +39,7 @@ Status_t FrameProtocol_PushByte(FrameProtocol_t *parser, uint8_t value)
                 parser->checksum = (uint8_t)(parser->checksum + value);
                 parser->state = FRAME_WAIT_COMMAND;
             } else {
+                /* 第二个字节仍为 AA 时保留为新帧头，尽快从错位字节流恢复。 */
                 parser->state = (value == 0xAAU) ? FRAME_WAIT_55 : FRAME_WAIT_AA;
                 parser->checksum = (value == 0xAAU) ? 0xAAU : 0U;
             }
@@ -59,6 +68,7 @@ Status_t FrameProtocol_PushByte(FrameProtocol_t *parser, uint8_t value)
             }
             return STATUS_BUSY;
         case FRAME_WAIT_CHECKSUM:
+            /* 无论校验成功与否都回到帧头搜索，下一字节可开始新帧。 */
             parser->state = FRAME_WAIT_AA;
             if (value != parser->checksum) {
                 parser->errorCount++;
@@ -79,6 +89,7 @@ Status_t FrameProtocol_GetFrame(FrameProtocol_t *parser, FrameProtocol_Frame_t *
     if ((parser == NULL) || (frame == NULL)) { return STATUS_INVALID_PARAM; }
     if (!parser->frameReady) { return STATUS_EMPTY; }
     *frame = parser->ready;
+    /* 单槽 ready 缓冲采用“读取即消费”，上层应及时调用以免被后帧覆盖。 */
     parser->frameReady = false;
     return STATUS_OK;
 }
@@ -92,6 +103,7 @@ uint16_t FrameProtocol_Encode(uint8_t command, const uint8_t *payload,
         ((payload == NULL) && (length != 0U)) || (capacity < frameLength)) {
         return 0U;
     }
+    /* 校验覆盖帧头、命令、长度和全部载荷，不包含校验字节自身。 */
     output[0] = 0xAAU;
     output[1] = 0x55U;
     output[2] = command;

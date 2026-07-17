@@ -1,12 +1,20 @@
+/**
+ * @file task_safety.h
+ * @brief 提供正常跑车和电机测试共用、可做 Host 测试的纯急停判断。
+ *
+ * 所属层：User 安全逻辑。独立为纯函数是为了验证“上电前已经按住启动/急停按键”
+ * 这种没有新 PRESSED 事件的情况也绝不会启动电机。
+ */
 #ifndef USER_TASK_SAFETY_H
 #define USER_TASK_SAFETY_H
 
 #include <stdbool.h>
 
-/*
- * 正常跑车、开环电机测试和 PID 测试共用的纯逻辑安全判断。
- * pressedEvent 用于响应刚按下的动作；keyHeld 用于覆盖“上电前已按住”
- * 这种不会再次产生按下事件的情况。纯函数便于在电脑端直接单元测试。
+/**
+ * @brief 判断当前电机相关上下文是否必须立即急停。
+ * @param motorContext 当前处于 ARMING/RUNNING/开环电机/PID 测试之一。
+ * @param pressedEvent 本轮是否产生消抖后的按下事件。
+ * @param keyHeld 按键当前是否保持按下，覆盖上电前已按住情况。
  */
 static inline bool TaskSafety_ShouldStop(bool motorContext,
                                          bool pressedEvent,

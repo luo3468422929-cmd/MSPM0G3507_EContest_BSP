@@ -1,8 +1,16 @@
+/**
+ * @file encoder_speed_window.c
+ * @brief 实现可变 dt 样本组成的最短固定时间窗与有符号 RPM 计算。
+ *
+ * 所属层：Hardware 纯算法。窗口保留刚好覆盖 minimumWindowS 的最新样本；
+ * 若单次调度延迟已经超过窗口，则该单次真实 dt 自身构成有效窗口。
+ */
 #include "encoder_speed_window.h"
 
 /* 0.01f 累加五次可能略小于 0.05f，比较时保留 1 us 浮点容差。 */
 #define ENCODER_SPEED_WINDOW_EPSILON_S 0.000001f
 
+/** 从累计量中移除最旧样本，并推进环形数组起点。 */
 static void EncoderSpeedWindow_RemoveOldest(EncoderSpeedWindow_t *window)
 {
     uint8_t index;
@@ -45,6 +53,7 @@ Status_t EncoderSpeedWindow_Push(EncoderSpeedWindow_t *window,
     }
 
     *ready = false;
+    /* 单次延迟超过默认窗口时，不能假设只经过 minimumWindowS。 */
     requiredWindowS = (sampleTimeS > minimumWindowS) ?
                       sampleTimeS : minimumWindowS;
 
@@ -72,6 +81,7 @@ Status_t EncoderSpeedWindow_Push(EncoderSpeedWindow_t *window,
 
     if ((window->totalTimeS + ENCODER_SPEED_WINDOW_EPSILON_S) >=
         requiredWindowS) {
+        /* RPM = 窗内转数 / 窗内秒数 × 60。计数正负号保留方向。 */
         *rpm = ((float)window->totalDeltaCount * 60.0f) /
                (countsPerWheelRev * window->totalTimeS);
         *ready = true;

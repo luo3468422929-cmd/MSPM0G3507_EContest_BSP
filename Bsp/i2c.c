@@ -1,3 +1,10 @@
+/**
+ * @file i2c.c
+ * @brief 实现 I2C0 寄存器读写、有限轮询、控制器复位和有限重试。
+ *
+ * 所属层：Bsp 总线层。当前用于八路循迹模块；地址和寄存器由 Hardware
+ * 层传入。所有等待都有上限，通信失败会返回上层，由控制层执行停车策略。
+ */
 #include "i2c.h"
 
 #include <string.h>
@@ -6,6 +13,7 @@
 #include "ti/driverlib/dl_i2c.h"
 #include "user_config.h"
 
+/** 等待控制器进入空闲，同时优先报告 DriverLib 的总线错误状态。 */
 static Status_t I2C_WaitIdle(I2C_Regs *instance)
 {
     for (uint32_t loops = 0U; loops < TRACK_I2C_TIMEOUT_LOOPS; ++loops) {
@@ -20,6 +28,7 @@ static Status_t I2C_WaitIdle(I2C_Regs *instance)
     return STATUS_TIMEOUT;
 }
 
+/** 从 RX FIFO 等待并取走一个字节；不会无限卡住主循环。 */
 static Status_t I2C_ReadOneByte(I2C_Regs *instance, uint8_t *value)
 {
     for (uint32_t loops = 0U; loops < TRACK_I2C_TIMEOUT_LOOPS; ++loops) {
@@ -35,6 +44,7 @@ static Status_t I2C_ReadOneByte(I2C_Regs *instance, uint8_t *value)
     return STATUS_TIMEOUT;
 }
 
+/** MSPM0 DriverLib 接口使用未左移的 7 位地址，合法范围为 0x00~0x7F。 */
 static bool I2C_AddressIsValid(uint8_t address)
 {
     return address <= 0x7FU;
@@ -62,7 +72,9 @@ static Status_t I2C_ReadRegisterOnce(I2C_Regs *instance, uint8_t address,
         return status;
     }
 
+    /* 第一次传输只写寄存器地址；等待完成后再单独发起读传输。 */
     DL_I2C_flushControllerTXFIFO(instance);
+    /* 读取阶段由硬件产生读方向和停止条件，软件逐字节清空 RX FIFO。 */
     DL_I2C_flushControllerRXFIFO(instance);
     if (DL_I2C_fillControllerTXFIFO(instance, &reg, 1U) != 1U) {
         return STATUS_OVERFLOW;
@@ -98,6 +110,7 @@ Status_t I2C_ReadRegister(uint8_t address, uint8_t reg,
         return STATUS_INVALID_PARAM;
     }
 
+    /* 首次失败后先复位传输状态，再按配置次数重新发起完整寄存器读取。 */
     for (uint8_t attempt = 0U; attempt <= I2C_RECOVERY_RETRY_COUNT;
          ++attempt) {
         status = I2C_ReadRegisterOnce(instance, address, reg, data, length);
@@ -116,6 +129,7 @@ static Status_t I2C_WriteRegisterOnce(I2C_Regs *instance, uint8_t address,
     uint8_t packet[4];
     Status_t status;
 
+    /* 寄存器地址和数据放入同一 TX 传输；packet 容量限制数据最多 3 字节。 */
     packet[0] = reg;
     if (length != 0U) {
         (void)memcpy(&packet[1], data, length);
@@ -149,6 +163,7 @@ Status_t I2C_WriteRegister(uint8_t address, uint8_t reg,
         ((data == NULL) && (length != 0U))) {
         return STATUS_INVALID_PARAM;
     }
+    /* 当前用途为短寄存器命令；需要写长块数据时应扩展接口而非越界复制。 */
     if (length > 3U) {
         return STATUS_OVERFLOW;
     }

@@ -1,3 +1,10 @@
+/**
+ * @file lcd.c
+ * @brief 实现 ST7735S 初始化、地址窗口、RGB565 填充和 5×7 ASCII 显示。
+ *
+ * 所属层：Hardware 显示器件层。底层 SPI 为同步阻塞发送，故正常状态页
+ * 每次只更新一行；本文件没有全屏显存，也不负责比赛界面状态机。
+ */
 #include "lcd.h"
 
 #include <stdio.h>
@@ -7,12 +14,13 @@
 #include "timer.h"
 #include "user_config.h"
 
+/** 一个 5 列、每列低 7 位有效的 ASCII 点阵。 */
 typedef struct {
     char character;
     uint8_t columns[5];
 } LCD_Glyph_t;
 
-/* 电赛状态页常用 5x7 ASCII；比旧 OLED 字库补齐 ! ( ) + =。 */
+/* 电赛状态页常用 5×7 ASCII；未收录字符统一显示最后一个 '?'。 */
 static const LCD_Glyph_t g_font[] = {
     {' ',{0,0,0,0,0}}, {'!',{0,0,95,0,0}}, {'(',{0,28,34,65,0}},
     {')',{0,65,34,28,0}}, {'+',{8,8,62,8,8}}, {'-',{8,8,8,8,8}},
@@ -33,8 +41,10 @@ static const LCD_Glyph_t g_font[] = {
     {'?',{2,1,81,9,6}}
 };
 
+/** 初始化成功标志；绘图接口在 LCD_Init 完成前会拒绝工作。 */
 static bool g_initialized;
 
+/** 查找字符点阵：小写转大写，未知字符回退到问号。 */
 static const uint8_t *LCD_FindGlyph(char character)
 {
     if ((character >= 'a') && (character <= 'z')) {
@@ -57,6 +67,7 @@ static Status_t LCD_WriteCommandData(uint8_t command,
         return STATUS_INVALID_PARAM;
     }
 
+    /* 一次 CS 低电平内先以 DC=0 发命令，再以 DC=1 发可选参数。 */
     DL_GPIO_clearPins(PIN_LCD_CS_PORT, PIN_LCD_CS);
     DL_GPIO_clearPins(PIN_LCD_DC_PORT, PIN_LCD_DC);
     status = SPI_Write(&command, 1U);
@@ -71,6 +82,7 @@ static Status_t LCD_WriteCommandData(uint8_t command,
 static Status_t LCD_SetAddressWindow(uint16_t x1, uint16_t y1,
                                      uint16_t x2, uint16_t y2)
 {
+    /* 不同屏幕玻璃的显存原点可能有偏移，由 user_config.h 集中修正。 */
     uint16_t startX = (uint16_t)(x1 + LCD_X_OFFSET);
     uint16_t endX = (uint16_t)(x2 + LCD_X_OFFSET);
     uint16_t startY = (uint16_t)(y1 + LCD_Y_OFFSET);
@@ -82,6 +94,7 @@ static Status_t LCD_SetAddressWindow(uint16_t x1, uint16_t y1,
     data[1] = (uint8_t)startX;
     data[2] = (uint8_t)(endX >> 8U);
     data[3] = (uint8_t)endX;
+    /* 0x2A 设置列范围，0x2B 设置行范围，0x2C 开始写显存。 */
     status = LCD_WriteCommandData(0x2AU, data, sizeof(data));
     if (status != STATUS_OK) { return status; }
 
@@ -96,6 +109,7 @@ static Status_t LCD_SetAddressWindow(uint16_t x1, uint16_t y1,
 
 static Status_t LCD_WritePixels(const uint8_t *data, uint16_t length)
 {
+    /* 地址窗口已经设置，此处只保持 DC=1 连续写像素数据。 */
     Status_t status;
     DL_GPIO_clearPins(PIN_LCD_CS_PORT, PIN_LCD_CS);
     DL_GPIO_setPins(PIN_LCD_DC_PORT, PIN_LCD_DC);
@@ -113,6 +127,7 @@ static Status_t LCD_SendInit(uint8_t command,
 
 Status_t LCD_Init(void)
 {
+    /* 下列参数来自当前商家 ST7735S 示例，换屏控制器时应整体替换并上板验证。 */
     static const uint8_t frameRate[] = {0x05U, 0x3CU, 0x3CU};
     static const uint8_t frameRate3[] = {0x05U, 0x3CU, 0x3CU, 0x05U, 0x3CU, 0x3CU};
     static const uint8_t power0[] = {0x28U, 0x08U, 0x04U};
@@ -136,6 +151,7 @@ Status_t LCD_Init(void)
     if (status != STATUS_OK) { return status; }
 
     g_initialized = false;
+    /* BL 为空操作；硬复位脚仍需满足低/高各 100 ms 的上电时序。 */
     LCD_SetBacklight(false);
     DL_GPIO_clearPins(PIN_LCD_RES_PORT, PIN_LCD_RES);
     Timer_DelayMs(100U);
@@ -147,6 +163,7 @@ Status_t LCD_Init(void)
     if (status != STATUS_OK) { return status; } \
 } while (0)
 
+    /* 退出睡眠后按“帧率→电源→方向/伽马→RGB565→开显示”配置。 */
     LCD_INIT(0x11U, NULL, 0U);
     Timer_DelayMs(120U);
     LCD_INIT(0xB1U, frameRate, sizeof(frameRate));
@@ -188,6 +205,7 @@ Status_t LCD_Fill(uint16_t x1, uint16_t y1,
     status = LCD_SetAddressWindow(x1, y1, x2, y2);
     if (status != STATUS_OK) { return status; }
 
+    /* 预生成 32 个同色像素，小块循环发送以避免为整屏申请大数组。 */
     for (uint16_t index = 0U; index < sizeof(pixels); index += 2U) {
         pixels[index] = (uint8_t)(color >> 8U);
         pixels[index + 1U] = (uint8_t)color;
@@ -223,6 +241,7 @@ Status_t LCD_WriteRegion(uint16_t x, uint16_t y,
         (width > (LCD_WIDTH - x)) || (height > (LCD_HEIGHT - y))) {
         return STATUS_INVALID_PARAM;
     }
+    /* 每像素固定两个字节；严格检查长度可防止窗口写入错位。 */
     expected = (uint32_t)width * (uint32_t)height * 2U;
     if (length != expected) { return STATUS_INVALID_PARAM; }
 
@@ -230,6 +249,7 @@ Status_t LCD_WriteRegion(uint16_t x, uint16_t y,
                                   (uint16_t)(x + width - 1U),
                                   (uint16_t)(y + height - 1U));
     if (status != STATUS_OK) { return status; }
+    /* SPI_Write 使用 uint16 长度，按 4096 字节分块避免窄类型溢出。 */
     while (length != 0U) {
         uint16_t chunk = (length > 4096U) ? 4096U : (uint16_t)length;
         status = LCD_WritePixels(data, chunk);
@@ -252,6 +272,7 @@ static Status_t LCD_ShowChar(uint16_t x, uint16_t y, char character,
         return STATUS_INVALID_PARAM;
     }
     glyph = LCD_FindGlyph(character);
+    /* 5 列字形 + 1 列间距，共生成 6×8 个 RGB565 像素。 */
     for (uint8_t row = 0U; row < 8U; ++row) {
         for (uint8_t column = 0U; column < 6U; ++column) {
             bool on = (column < 5U) && (((glyph[column] >> row) & 1U) != 0U);
@@ -269,6 +290,7 @@ Status_t LCD_ShowString(uint16_t x, uint16_t y, const char *text,
 {
     if (!g_initialized) { return STATUS_NOT_INITIALIZED; }
     if (text == NULL) { return STATUS_INVALID_PARAM; }
+    /* 本接口不自动换行；越过右边界返回 OVERFLOW，由状态页控制布局。 */
     while (*text != '\0') {
         Status_t status;
         if (x + 5U >= LCD_WIDTH) {

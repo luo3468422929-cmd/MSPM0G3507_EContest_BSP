@@ -1,12 +1,21 @@
+/**
+ * @file lcd_font.c
+ * @brief 实现内置 16×16 汉字字模查找、UTF-8 校验和混合字符串绘制。
+ *
+ * 所属层：Hardware LCD 扩展。字模为行优先、每行 2 字节、最高位在左；
+ * 未收录汉字返回错误，避免静默显示错误字符。
+ */
 #include "lcd_font.h"
 
 #include "lcd.h"
 
+/** 一个三字节 UTF-8 汉字及对应 16×16 单色位图。 */
 typedef struct {
     uint8_t utf8[3];
     uint8_t bitmap[32];
 } LCD_Font16Entry_t;
 
+/* 仅收录当前电赛界面常用汉字；大数组不逐字节注释。 */
 static const LCD_Font16Entry_t g_font16[] = {
     {{0xE7, 0x94, 0xB5}, {0x01, 0x00, 0x01, 0x00, 0x3F, 0xF8, 0x21, 0x08, 0x21, 0x08, 0x3F, 0xF8, 0x21, 0x08, 0x21, 0x08, 0x3F, 0xF8, 0x3F, 0xF8, 0x21, 0x00, 0x01, 0x02, 0x01, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}, /* 电 */
     {{0xE8, 0xB5, 0x9B}, {0x3F, 0xFE, 0x24, 0x26, 0x1F, 0xFE, 0x04, 0x20, 0x1F, 0xF8, 0x04, 0x20, 0x7F, 0xFE, 0x18, 0x30, 0x7F, 0xFE, 0x09, 0x90, 0x09, 0x10, 0x03, 0x60, 0x3C, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}, /* 赛 */
@@ -29,6 +38,9 @@ static const LCD_Font16Entry_t g_font16[] = {
     {{0xE6, 0x83, 0xAF}, {0x11, 0xFC, 0x11, 0x24, 0x17, 0xFE, 0x59, 0x24, 0x57, 0xFC, 0x50, 0x00, 0x11, 0xFC, 0x11, 0x04, 0x11, 0x24, 0x11, 0x64, 0x11, 0x44, 0x10, 0xCC, 0x17, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}, /* 惯 */
 };
 
+/**
+ * 校验并解码 1~3 字节 UTF-8；拒绝截断序列、非法续字节、过长编码和代理区。
+ */
 static Status_t LCD_DecodeUtf8(const char *text, uint32_t *codePoint,
                                uint8_t *length)
 {
@@ -76,6 +88,7 @@ static Status_t LCD_DecodeUtf8(const char *text, uint32_t *codePoint,
 }
 static const uint8_t *LCD_FindChinese16(const char *text)
 {
+    /* 当前中文字库只含三字节 UTF-8，因此直接按三字节键查表。 */
     uint8_t utf8[3];
     uint16_t index;
 
@@ -105,6 +118,7 @@ Status_t LCD_ShowChinese16(uint16_t x, uint16_t y, const char *text,
         if (status != STATUS_OK) { return status; }
 
         if (codePoint < 0x80U) {
+            /* 允许中文状态文字中混入数字和英文，ASCII 仍使用 5×7 字库。 */
             char ascii[2] = {(char)codePoint, '\0'};
             status = LCD_ShowString(x, y, ascii, color, background);
             if (status != STATUS_OK) { return status; }
@@ -123,6 +137,7 @@ Status_t LCD_ShowChinese16(uint16_t x, uint16_t y, const char *text,
             uint8_t row;
             uint8_t column;
             if (bitmap == NULL) { return STATUS_INVALID_PARAM; }
+            /* 位图 1 表示前景色，0 表示背景色，转换为 LCD 所需大端 RGB565。 */
             for (row = 0U; row < 16U; ++row) {
                 for (column = 0U; column < 16U; ++column) {
                     bool on = (bitmap[(uint16_t)row * 2U +

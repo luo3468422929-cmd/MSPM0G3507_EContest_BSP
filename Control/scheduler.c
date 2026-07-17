@@ -1,5 +1,13 @@
+/**
+ * @file scheduler.c
+ * @brief 实现基于毫秒 tick 的固定周期门控，并在阻塞后跳过错过周期。
+ *
+ * 所属层：Control 调度工具。使用无符号时间差兼容 tick 回绕；它不是抢占式
+ * 调度器，任务仍在 Task_Run() 中按顺序执行。
+ */
 #include "scheduler.h"
 
+/** 各枚举槽位对应周期，以及上次真正放行的时间。 */
 static const uint16_t g_periodMs[SCHEDULER_TASK_COUNT] = {5U, 10U, 20U, 100U, 200U};
 static uint32_t g_lastRunMs[SCHEDULER_TASK_COUNT];
 

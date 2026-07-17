@@ -1,3 +1,10 @@
+/**
+ * @file uart.c
+ * @brief 实现 UART0 调试口和 UART2 惯导口的统一发送与中断接收。
+ *
+ * 所属层：Bsp 通信层。每个串口拥有独立 RX 环形缓冲；中断只搬字节，
+ * 主循环负责协议解析。发送为有限超时轮询，适合调试和低频状态输出。
+ */
 #include "uart.h"
 
 #include <string.h>
@@ -8,12 +15,14 @@
 #include "ring_buffer.h"
 #include "user_config.h"
 
+/** 一个逻辑 UART 的硬件实例、接收缓冲和固定存储。 */
 typedef struct {
     UART_Regs *instance;
     RingBuffer_t rx;
     uint8_t storage[UART_RX_BUFFER_SIZE];
 } UART_Context_t;
 
+/** 两个 UART 上下文；rx.head 由 ISR 写，rx.tail 由主循环写。 */
 static UART_Context_t g_uart[UART_ID_COUNT];
 
 static bool UART_IdIsValid(UART_Id_t id)
@@ -23,6 +32,7 @@ static bool UART_IdIsValid(UART_Id_t id)
 
 Status_t UART_Init(void)
 {
+    /* 先绑定 SysConfig 实例并建立软件缓冲，再开放 NVIC，避免早到字节丢失。 */
     g_uart[UART_ID_DEBUG].instance = PIN_UART_DEBUG_INST;
     g_uart[UART_ID_IMU].instance = PIN_UART_IMU_INST;
     for (uint8_t index = 0U; index < (uint8_t)UART_ID_COUNT; ++index) {
@@ -71,6 +81,7 @@ Status_t UART_SendString(UART_Id_t id, const char *text)
 
 Status_t UART_Printf(const char *format, ...)
 {
+    /* 固定栈缓冲避免动态内存；超过 127 字符的调试信息按末尾截断。 */
     char buffer[128];
     int length;
     va_list arguments;
@@ -115,6 +126,7 @@ void UART_RxIRQHandler(UART_Id_t id)
 
 void UART0_IRQHandler(void)
 {
+    /* UART0 已接板载 CH340，RX 中断服务调试命令/上位机输入。 */
     if (DL_UART_getPendingInterrupt(PIN_UART_DEBUG_INST) == DL_UART_IIDX_RX) {
         UART_RxIRQHandler(UART_ID_DEBUG);
     }
@@ -122,6 +134,7 @@ void UART0_IRQHandler(void)
 
 void UART2_IRQHandler(void)
 {
+    /* UART2 中断只搬运 NCU RX 字节；惯导模块仍可主动发送校零命令。 */
     if (DL_UART_getPendingInterrupt(PIN_UART_IMU_INST) == DL_UART_IIDX_RX) {
         UART_RxIRQHandler(UART_ID_IMU);
     }

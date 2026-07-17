@@ -1,3 +1,11 @@
+/**
+ * @file i2c.h
+ * @brief 提供带有限超时与可配置恢复重试的 I2C 寄存器读写接口。
+ *
+ * 所属层：Bsp 总线层。当前实例由 board_pins.h 映射到循迹 I2C0；具体
+ * 设备地址和寄存器含义由 Hardware 层决定。重试次数由
+ * I2C_RECOVERY_RETRY_COUNT 配置，当前默认一次；SDA/SCL 必须上拉到 3.3 V。
+ */
 #ifndef I2C_H
 #define I2C_H
 

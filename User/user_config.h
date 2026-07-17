@@ -1,3 +1,10 @@
+/**
+ * @file user_config.h
+ * @brief 集中管理比赛现场允许快速修改的功能、机械、协议和控制参数。
+ *
+ * 所属层：User 配置入口。这里禁止写 PAx/PBx 物理引脚；换引脚只改
+ * empty.syscfg。修改参数后先运行对应 TEST_*，再进入正常小车模式。
+ */
 #ifndef USER_CONFIG_H
 #define USER_CONFIG_H
 
@@ -35,7 +42,7 @@
  */
 #define STARTUP_TEST                      TEST_NONE
 
-/* 系统节拍。 */
+/* 系统节拍：当前 32 MHz / 1000 Hz = 32000 个 CPU 周期一次 SysTick。 */
 #define SYSTEM_TICK_HZ                    1000U
 #define SYSTEM_CLOCK_HZ                   32000000U
 #if SYSTEM_TICK_HZ == 0U
@@ -65,7 +72,10 @@
 #define PID_TEST_VOFA_PERIOD_MS           100U  /* 波形采样周期。 */
 #define PID_TEST_TEXT_REPORT_MS           500U  /* 人类可读串口输出降频。 */
 
-/* 编码器与轮组机械参数。 */
+/*
+ * 编码器与轮组机械参数：方向先用 TEST_ENCODER 手转确认；CPR 用输出轴
+ * 多圈实测，不要只按厂家电机轴信号数和标称减速比猜测。
+ */
 #define ENCODER_LEFT_REVERSED             0
 #define ENCODER_RIGHT_REVERSED            1
 #define ENCODER_PULSES_PER_MOTOR_REV      11.0f /* 厂家标称：电机轴一圈 11 个信号。 */
@@ -77,12 +87,15 @@
 #define ENCODER_SPEED_FILTER_ALPHA        0.35f
 #define ENCODER_VERIFY_TURNS              10U   /* 人工校验时输出轴转动圈数。 */
 
-/* UART 与惯导。 */
+/* UART 与惯导：循环次数是保护上限，不代表实际微秒数。 */
 #define UART_RX_BUFFER_SIZE               128U
 #define UART_TX_TIMEOUT_LOOPS             200000U
 #define IMU_ONLINE_TIMEOUT_MS             200U
 
-/* 亚博八路 MCU 灰度模块：I2C 地址/寄存器依据模块手册。 */
+/*
+ * 亚博八路 MCU 灰度模块：I2C 地址/寄存器依据模块手册。
+ * 当前 SDA/SCL 需要上拉到 3.3 V；禁止上拉到模块 5 V 电源。
+ */
 #define TRACK_CHANNEL_COUNT               8U
 #define TRACK_I2C_ADDRESS                 0x12U
 #define TRACK_I2C_STATUS_REGISTER         0x30U
@@ -99,7 +112,7 @@
 #define LCD_MADCTL                        0x00U
 #define LCD_SPI_TIMEOUT_LOOPS             200000U
 
-/* 10 ms 控制周期及默认速度。 */
+/* 10 ms 控制周期及正常循迹速度；修改周期必须同步 PID sampleTime。 */
 #define CONTROL_SAMPLE_TIME_S             0.010f
 #define CAR_DEFAULT_BASE_SPEED_RPM        30.0f
 #define CAR_MAX_TARGET_RPM                120.0f

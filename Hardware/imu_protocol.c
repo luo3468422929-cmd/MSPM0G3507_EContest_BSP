@@ -1,7 +1,15 @@
+/**
+ * @file imu_protocol.c
+ * @brief 实现 NCU 0x5A 五字节帧的校验、重同步和物理量换算。
+ *
+ * 所属层：Hardware 纯协议。解析器不读取 UART；调用者逐字节推入并传入
+ * 当前毫秒，用于在线判断记录最后合法帧时间。
+ */
 #include "imu_protocol.h"
 
 #include <string.h>
 
+/** 按协议的小端顺序读取有符号 16 位原始量。 */
 static int16_t ImuProtocol_ReadInt16LE(const uint8_t *data)
 {
     return (int16_t)((uint16_t)data[0] | ((uint16_t)data[1] << 8U));
@@ -23,6 +31,7 @@ Status_t ImuProtocol_PushByte(ImuProtocol_t *parser, uint8_t value, uint32_t now
         return STATUS_INVALID_PARAM;
     }
     if (parser->index == 0U) {
+        /* 未遇到 0x5A 时直接丢弃噪声，不占用帧缓冲。 */
         if (value != 0x5AU) {
             return STATUS_EMPTY;
         }
@@ -36,6 +45,7 @@ Status_t ImuProtocol_PushByte(ImuProtocol_t *parser, uint8_t value, uint32_t now
     }
 
     parser->index = 0U;
+    /* 第 5 字节等于前四字节的低 8 位累加和。 */
     checksum = (uint8_t)(parser->frame[0] + parser->frame[1] +
                          parser->frame[2] + parser->frame[3]);
     if (checksum != parser->frame[4]) {
@@ -50,9 +60,11 @@ Status_t ImuProtocol_PushByte(ImuProtocol_t *parser, uint8_t value, uint32_t now
 
     raw = ImuProtocol_ReadInt16LE(&parser->frame[2]);
     if (parser->frame[1] == 0xAAU) {
+        /* int16 满量程映射到 ±2000 °/s。 */
         parser->sample.gyroZDps = ((float)raw / 32768.0f) * 2000.0f;
         parser->sample.gyroZValid = true;
     } else if (parser->frame[1] == 0xBBU) {
+        /* int16 满量程映射到 ±180° 航向。 */
         parser->sample.yawDeg = ((float)raw / 32768.0f) * 180.0f;
         parser->sample.yawValid = true;
     } else {

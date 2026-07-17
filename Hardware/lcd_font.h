@@ -1,10 +1,17 @@
+/**
+ * @file lcd_font.h
+ * @brief 定义内置 16×16 常用中文字模的 UTF-8 显示接口。
+ *
+ * 所属层：Hardware LCD 扩展。只支持 lcd_font.c 中收录的汉字；普通 ASCII
+ * 会转交 LCD_ShowString()。增加汉字时需同时添加 UTF-8 三字节和 32 字节字模。
+ */
 #ifndef LCD_FONT_H
 #define LCD_FONT_H
 
 #include "common.h"
 
 /**
- * 按 UTF-8 字符串显示内置的 16×16 常用中文字模。
+ * @brief 按 UTF-8 字符串显示内置的 16×16 常用中文字模。
  *
  * 入口参数：
  *   x/y        左上角坐标；

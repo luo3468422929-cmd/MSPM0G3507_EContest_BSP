@@ -1,3 +1,10 @@
+/**
+ * @file car_control.c
+ * @brief 实现循迹转向 PID、左右轮独立速度 PID 和 TB6612 输出协调。
+ *
+ * 数据流：编码器更新 → I2C 循迹 → 转向修正 → 左右目标 RPM → 速度 PID
+ * → 电机缓升。所属层：Control；所有硬件细节由 Hardware 模块封装。
+ */
 #include "car_control.h"
 
 #include "encoder.h"
@@ -6,6 +13,7 @@
 #include "track.h"
 #include "user_config.h"
 
+/* 三个独立 PID、对外快照和编码器真实 dt 基准。均由 10 ms 主循环访问。 */
 static PID_t g_leftSpeedPid;
 static PID_t g_rightSpeedPid;
 static PID_t g_steeringPid;
@@ -61,6 +69,7 @@ Status_t CarControl_Init(void)
 {
     Status_t status = CarControl_InitPids();
     if (status != STATUS_OK) { return status; }
+    /* 仅基础速度采用比赛默认值，其余目标/反馈/输出从安全的 0 开始。 */
     g_data = (CarControl_Data_t){
         .baseSpeedRpm = CAR_DEFAULT_BASE_SPEED_RPM
     };
@@ -94,6 +103,7 @@ static void CarControl_UpdateEncoder(uint32_t nowMs)
     uint32_t elapsedMs;
 
     if (!g_encoderTimeInitialized) {
+        /* 刚使能时只建立时间基准，不把停车期间积累时间带入速度。 */
         g_lastEncoderUpdateMs = nowMs;
         g_encoderTimeInitialized = true;
         return;
@@ -116,6 +126,7 @@ static void CarControl_ReadEncoderData(Encoder_Data_t *left,
 
 static void CarControl_RunSpeedPid(float targetLeftRpm, float targetRightRpm)
 {
+    /* 默认不允许单轮目标变负，防止大转向量让车辆原地反转。 */
     const float minimumRpm = (CAR_ALLOW_REVERSE_WHEEL != 0) ?
                              -CAR_MAX_TARGET_RPM : 0.0f;
 
@@ -123,6 +134,7 @@ static void CarControl_RunSpeedPid(float targetLeftRpm, float targetRightRpm)
         targetLeftRpm, minimumRpm, CAR_MAX_TARGET_RPM);
     g_data.targetRightRpm = Common_ClampFloat(
         targetRightRpm, minimumRpm, CAR_MAX_TARGET_RPM);
+    /* 左右轮参数独立，可补偿电机、轮胎和负载差异。 */
     g_data.outputLeft = PID_UpdatePosition(&g_leftSpeedPid,
         g_data.targetLeftRpm, g_data.actualLeftRpm);
     g_data.outputRight = PID_UpdatePosition(&g_rightSpeedPid,
@@ -166,6 +178,7 @@ void CarControl_Update(uint32_t nowMs)
         return;
     }
 
+    /* 目标位置为阵列中心 0；差速量一减一加，保持平均速度接近 baseSpeed。 */
     g_data.steering = PID_UpdatePosition(&g_steeringPid, 0.0f,
                                          g_data.positionError);
     CarControl_RunSpeedPid(g_data.baseSpeedRpm - g_data.steering,
@@ -180,6 +193,7 @@ void CarControl_UpdateSpeedTest(uint32_t nowMs, float targetLeftRpm,
 
     CarControl_UpdateEncoder(nowMs);
     CarControl_ReadEncoderData(&left, &right);
+    /* 测速测试不访问循迹，也不覆盖正式 baseSpeedRpm。 */
     g_data.positionError = 0.0f;
     g_data.lineFound = true;
     g_data.steering = 0.0f;
@@ -191,6 +205,7 @@ void CarControl_UpdateSpeedTest(uint32_t nowMs, float targetLeftRpm,
 
 void CarControl_Stop(void)
 {
+    /* 清除所有动态状态，防止再次启动时带着上次积分突然输出。 */
     g_data.enabled = false;
     g_encoderTimeInitialized = false;
     g_data.targetLeftRpm = 0.0f;

@@ -1,3 +1,10 @@
+/**
+ * @file test.c
+ * @brief 实现 LCD、按键、循迹、电机、PID、编码器和惯导的独立上板测试。
+ *
+ * 所属层：User 测试框架。user_config.h 的 STARTUP_TEST 选择入口，Task_Run
+ * 每轮把同一毫秒时间和按键事件传入；测试不得自行再次扫描/消费按键。
+ */
 #include "test.h"
 
 #include <stdio.h>
@@ -15,6 +22,10 @@
 #include "uart.h"
 #include "user_config.h"
 
+/*
+ * 全部测试共用的当前编号、阶段时间、输出节流和首次进入标志。
+ * 一次只运行一个测试，因此不需要每个测试重复保存同类变量。
+ */
 static Test_Id_t g_test = TEST_NONE;
 static uint32_t g_lastTickMs;
 static uint32_t g_lastEncoderUpdateMs;
@@ -51,6 +62,7 @@ static const uint8_t g_lcdCheckerboard[16U * 16U * 2U] = {
 
 static bool Test_IsAvailable(Test_Id_t id)
 {
+    /* 依赖关闭时拒绝进入测试，尤其电机测试必须同时具备按键急停。 */
     switch (id) {
         case TEST_NONE: return true;
         case TEST_LED: return CONFIG_LED_ENABLE != 0;
@@ -82,6 +94,7 @@ static bool Test_IsAvailable(Test_Id_t id)
 
 void Test_Select(Test_Id_t id)
 {
+    /* 离开任何会驱动电机的测试前先关输出，不能等新测试下一轮处理。 */
     if (g_test == TEST_MOTOR) {
         Motor_EmergencyStop();
     } else if (g_test == TEST_PID) {
@@ -89,6 +102,7 @@ void Test_Select(Test_Id_t id)
         CarControl_Stop();
     }
     g_test = Test_IsAvailable(id) ? id : TEST_NONE;
+    /* 所有阶段变量从统一初值开始，切换测试不会继承上一次计时。 */
     g_lastTickMs = 0U;
     g_lastEncoderUpdateMs = 0U;
     g_lastPidReportMs = 0U;
@@ -114,6 +128,7 @@ bool Test_UsesMotor(Test_Id_t id)
 
 static void Test_RunKey(Key_Event_t event)
 {
+    /* 只有事件发生时输出一次，不能在循环中持续刷 UART。 */
     if ((event > KEY_EVENT_NONE) && (event <= KEY_EVENT_LONG_PRESSED)) {
         static const char *const names[] = {
             "NONE", "PRESSED", "RELEASED", "CLICKED", "LONG"
@@ -124,6 +139,7 @@ static void Test_RunKey(Key_Event_t event)
 
 static void Test_RunTrack(uint32_t nowMs)
 {
+    /* 100 ms 读取/打印一次，移动模块时仍足够直观且不会淹没串口。 */
     const Track_Data_t *data;
     if ((uint32_t)(nowMs - g_lastTickMs) < 100U) { return; }
     g_lastTickMs = nowMs;
@@ -141,6 +157,7 @@ static void Test_RunMotor(uint32_t nowMs)
     uint32_t elapsedMs;
 
     if (g_firstRun) {
+        /* 阶段 0：两轮同占空比正向；进入前必须把小车架空。 */
         g_firstRun = false;
         Encoder_Reset(ENCODER_LEFT);
         Encoder_Reset(ENCODER_RIGHT);
@@ -173,6 +190,7 @@ static void Test_RunMotor(uint32_t nowMs)
                           (long)right.totalCount, (double)right.rpm);
     }
 
+    /* 阶段时序：正转 RUN_MS → 停 STOP_MS → 反转 RUN_MS → 急停退出。 */
     if ((uint32_t)(nowMs - g_lastTickMs) <
         ((g_phase == 1U) ? MOTOR_TEST_STOP_MS : MOTOR_TEST_RUN_MS)) {
         return;
@@ -196,6 +214,7 @@ static void Test_RunPid(uint32_t nowMs)
     char line[22];
 
     if (g_firstRun) {
+        /* 两轮目标相同，只验证速度环，不读取循迹或运行转向 PID。 */
         g_firstRun = false;
         g_lastTickMs = nowMs;
         g_lastPidReportMs = nowMs;
@@ -208,6 +227,7 @@ static void Test_RunPid(uint32_t nowMs)
 
     if ((uint32_t)(nowMs - g_lastTickMs) < 10U) { return; }
     g_lastTickMs = nowMs;
+    /* 控制仍以约 10 ms 更新，遥测和 LCD 在后面独立降频。 */
     CarControl_UpdateSpeedTest(nowMs, PID_TEST_TARGET_RPM,
                                PID_TEST_TARGET_RPM);
     if ((uint32_t)(nowMs - g_lastPidReportMs) <
@@ -264,6 +284,7 @@ static void Test_RunPid(uint32_t nowMs)
 
 static float Test_EncoderCountErrorPercent(float countsPerRev)
 {
+    /* 相对 user_config 中当前 CPR 的百分比误差，正值表示实测计数更多。 */
     return (countsPerRev - ENCODER_COUNTS_PER_WHEEL_REV) * 100.0f /
            ENCODER_COUNTS_PER_WHEEL_REV;
 }
@@ -363,6 +384,7 @@ static void Test_RunImu(uint32_t nowMs)
         g_firstRun = false;
         (void)LCD_Clear(LCD_COLOR_BLACK);
     }
+    /* 先持续消费 UART；显示/打印限制为 100 ms，不影响接收解析。 */
     IMU_Process(nowMs);
     if ((uint32_t)(nowMs - g_lastTickMs) < 100U) { return; }
     g_lastTickMs = nowMs;
@@ -402,6 +424,7 @@ static void Test_RunImu(uint32_t nowMs)
 
 static void Test_RunLcd(void)
 {
+    /* LCD 测试只绘制一次：四色块、ASCII、两个汉字和 16×16 棋盘。 */
     if (!g_firstRun) { return; }
     g_firstRun = false;
     (void)LCD_Clear(LCD_COLOR_BLACK);
@@ -418,6 +441,7 @@ static void Test_RunLcd(void)
 
 void Test_Run(uint32_t nowMs, Key_Event_t event)
 {
+    /* 统一分派入口；每个 RunXxx 都必须保持单步、可快速返回。 */
     switch (g_test) {
         case TEST_LED:
             if ((uint32_t)(nowMs - g_lastTickMs) >= 500U) {

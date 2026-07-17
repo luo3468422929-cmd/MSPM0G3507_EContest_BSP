@@ -1,27 +1,29 @@
+/**
+ * @file encoder_verification.h
+ * @brief 提供“手转输出轴多圈”校验每圈计数和平均 RPM 的纯计算工具。
+ *
+ * 所属层：Hardware 校验辅助。该头文件不访问 GPIO、时基或串口，由
+ * TEST_ENCODER 传入起止计数和时间，也可直接在 Host 单元测试执行。
+ */
 #ifndef ENCODER_VERIFICATION_H
 #define ENCODER_VERIFICATION_H
 
 #include "common.h"
 
-/*
- * 编码器人工校验工具。
- *
- * 用法：第一次按键时记录两轮累计计数；手动将输出轴转指定圈数；
- * 第二次按键时结束测量，计算每圈计数和这段时间对应的平均 RPM。
- * 该工具只做计算，不依赖 GPIO、定时器或串口，便于主机测试。
- */
+/** 一次人工多圈校验的状态和最终结果。 */
 typedef struct {
-    bool active;
-    uint8_t targetTurns;
-    uint32_t startTickMs;
-    uint32_t elapsedMs;
-    int32_t startCount[2];
-    int32_t deltaCount[2];
-    float countsPerRev[2];
-    float averageRpm;
-    bool hasResult;
+    bool active;           /**< 已按第一次键，正在等待转完目标圈数。 */
+    uint8_t targetTurns;   /**< 人工承诺转动的输出轴圈数。 */
+    uint32_t startTickMs;  /**< 开始时系统毫秒。 */
+    uint32_t elapsedMs;    /**< 完成后实际耗时。 */
+    int32_t startCount[2]; /**< 开始时左右累计计数。 */
+    int32_t deltaCount[2]; /**< 完成时左右有符号计数差。 */
+    float countsPerRev[2]; /**< 左右轮绝对计数/输出轴圈。 */
+    float averageRpm;      /**< 按人工圈数和耗时换算的平均 RPM。 */
+    bool hasResult;        /**< Finish 成功后结果有效。 */
 } EncoderVerification_t;
 
+/** @brief 安全取得 int32 的绝对值并用 uint32 表示，覆盖 INT32_MIN。 */
 static inline uint32_t EncoderVerification_AbsInt32(int32_t value)
 {
     /* 避免直接对 INT32_MIN 做取负运算造成有符号溢出。 */
@@ -30,7 +32,7 @@ static inline uint32_t EncoderVerification_AbsInt32(int32_t value)
 }
 
 /**
- * 初始化人工校验状态。
+ * @brief 初始化人工校验状态。
  * @param verification 校验状态对象
  * @param targetTurns 本次人工转动的目标圈数，必须大于 0
  */
@@ -46,7 +48,7 @@ static inline Status_t EncoderVerification_Init(
 }
 
 /**
- * 开始一次人工校验。
+ * @brief 开始一次人工校验。
  * @param verification 已初始化的校验状态
  * @param leftCount 当前左轮累计计数
  * @param rightCount 当前右轮累计计数
@@ -74,7 +76,7 @@ static inline Status_t EncoderVerification_Start(
 }
 
 /**
- * 结束一次人工校验并计算结果。
+ * @brief 结束一次人工校验并计算结果。
  * @param verification 校验状态
  * @param leftCount 当前左轮累计计数
  * @param rightCount 当前右轮累计计数
