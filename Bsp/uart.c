@@ -48,7 +48,9 @@ Status_t UART_Send(UART_Id_t id, const uint8_t *data, uint16_t length)
     }
     for (uint16_t index = 0U; index < length; ++index) {
         timeout = UART_TX_TIMEOUT_LOOPS;
-        while (DL_UART_isBusy(g_uart[id].instance) && (timeout > 0U)) {
+        /* FIFO 有空位即可写下一个字节，无需等待整帧完全发送完。 */
+        while (DL_UART_Main_isTXFIFOFull(g_uart[id].instance) &&
+               (timeout > 0U)) {
             timeout--;
         }
         if (timeout == 0U) {
@@ -102,8 +104,12 @@ uint32_t UART_GetOverflowCount(UART_Id_t id)
 void UART_RxIRQHandler(UART_Id_t id)
 {
     if (UART_IdIsValid(id)) {
-        (void)RingBuffer_Push(&g_uart[id].rx,
-                              DL_UART_Main_receiveData(g_uart[id].instance));
+        /* 一次中断排空当前 FIFO，避免高波特率连续数据残留并溢出。 */
+        while (!DL_UART_Main_isRXFIFOEmpty(g_uart[id].instance)) {
+            (void)RingBuffer_Push(
+                &g_uart[id].rx,
+                DL_UART_Main_receiveData(g_uart[id].instance));
+        }
     }
 }
 

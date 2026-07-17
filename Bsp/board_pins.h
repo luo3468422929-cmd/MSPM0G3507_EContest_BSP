@@ -50,7 +50,5 @@
 #define PIN_LCD_DC                        GPIO_A_LCD_DC_PIN
 #define PIN_LCD_RES_PORT                  GPIO_A_PORT
 #define PIN_LCD_RES                       GPIO_A_LCD_RES_PIN
-#define PIN_LCD_BL_PORT                   GPIO_A_PORT
-#define PIN_LCD_BL                        GPIO_A_LCD_BL_PIN
 
 #endif

@@ -45,6 +45,9 @@ static Status_t LCD_DecodeUtf8(const char *text, uint32_t *codePoint,
         *length = 1U;
         return STATUS_OK;
     }
+    if (text[1] == '\0') {
+        return STATUS_INVALID_PARAM;
+    }
     second = (uint8_t)text[1];
     if ((first >= 0xC2U) && (first <= 0xDFU) &&
         ((second & 0xC0U) == 0x80U)) {
@@ -54,6 +57,9 @@ static Status_t LCD_DecodeUtf8(const char *text, uint32_t *codePoint,
         return STATUS_OK;
     }
     if ((first < 0xE0U) || (first > 0xEFU)) {
+        return STATUS_INVALID_PARAM;
+    }
+    if (text[2] == '\0') {
         return STATUS_INVALID_PARAM;
     }
     third = (uint8_t)text[2];

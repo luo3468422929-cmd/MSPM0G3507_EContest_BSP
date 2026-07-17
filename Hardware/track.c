@@ -19,10 +19,12 @@ static void Track_ApplyModuleMask(uint8_t moduleMask)
 {
     for (uint8_t index = 0U; index < TRACK_CHANNEL_COUNT; ++index) {
         uint8_t bit = (uint8_t)(7U - index);
+        uint8_t logicalIndex = (TRACK_SENSOR_REVERSED != 0) ?
+                               (uint8_t)(7U - index) : index;
         bool moduleBitHigh = (moduleMask & (uint8_t)(1U << bit)) != 0U;
         bool onBlack = (TRACK_BLACK_IS_HIGH != 0) ?
                        moduleBitHigh : !moduleBitHigh;
-        g_data.raw[index] = onBlack ? 1000U : 0U;
+        g_data.raw[logicalIndex] = onBlack ? 1000U : 0U;
     }
 }
 
@@ -90,15 +92,20 @@ Status_t Track_Update(void)
     }
 
     g_data.activeMask = mask;
-    g_data.lineFound = (mask != 0U);
-    if (!g_data.lineFound) {
+    if (mask == 0U) {
+        g_data.lineFound = false;
         g_data.state = TRACK_STATE_LOST;
         /* 丢线时保留上一次误差方向，便于控制层低速找线。 */
     } else {
         g_data.positionError = TrackMath_WeightedPosition(
             mask, g_trackWeights, TRACK_CHANNEL_COUNT);
-        g_data.state = (mask == 0xFFU) ?
-                       TRACK_STATE_ALL_ACTIVE : TRACK_STATE_LINE;
+        if (mask == 0xFFU) {
+            g_data.state = TRACK_STATE_ALL_ACTIVE;
+            g_data.lineFound = (TRACK_ALL_ACTIVE_IS_LINE != 0);
+        } else {
+            g_data.state = TRACK_STATE_LINE;
+            g_data.lineFound = true;
+        }
     }
     return STATUS_OK;
 }

@@ -14,7 +14,7 @@
 #define LCD_COLOR_YELLOW                  0xFFE0U
 #define LCD_COLOR_CYAN                    0x07FFU
 
-/** 初始化 ST7735S、清屏并开启背光。 */
+/** 初始化 ST7735S 并清屏；本车背光由硬件 3.3 V 常亮。 */
 Status_t LCD_Init(void);
 /** 全屏填充 RGB565 颜色。 */
 Status_t LCD_Clear(uint16_t color);
@@ -36,6 +36,7 @@ Status_t LCD_ShowInt(uint16_t x, uint16_t y, int32_t value,
 Status_t LCD_ShowFloat(uint16_t x, uint16_t y, float value,
                        uint8_t decimals, uint16_t color,
                        uint16_t background);
+/** 兼容旧调用；当前 BL 直连 3.3 V，因此本函数不会操作 GPIO。 */
 void LCD_SetBacklight(bool on);
 
 #endif

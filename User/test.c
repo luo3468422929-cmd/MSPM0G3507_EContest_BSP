@@ -19,7 +19,9 @@ static Test_Id_t g_test = TEST_NONE;
 static uint32_t g_lastTickMs;
 static uint32_t g_lastEncoderUpdateMs;
 static uint32_t g_lastPidReportMs;
+static uint32_t g_lastTextReportMs;
 static uint8_t g_phase;
+static uint8_t g_testDisplayLine;
 static bool g_firstRun;
 static EncoderVerification_t g_encoderVerification;
 
@@ -47,19 +49,53 @@ static const uint8_t g_lcdCheckerboard[16U * 16U * 2U] = {
 #undef LCD_CHECKER_ROW_A
 #undef LCD_CHECKER_ROW_B
 
+static bool Test_IsAvailable(Test_Id_t id)
+{
+    switch (id) {
+        case TEST_NONE: return true;
+        case TEST_LED: return CONFIG_LED_ENABLE != 0;
+        case TEST_KEY:
+            return (CONFIG_KEY_ENABLE != 0) && (CONFIG_UART_ENABLE != 0);
+        case TEST_TRACK:
+            return (CONFIG_TRACK_ENABLE != 0) && (CONFIG_UART_ENABLE != 0);
+        case TEST_MOTOR:
+            return (CONFIG_MOTOR_ENABLE != 0) &&
+                   (CONFIG_ENCODER_ENABLE != 0) &&
+                   (CONFIG_UART_ENABLE != 0);
+        case TEST_PID:
+            return (CONFIG_CAR_CONTROL_ENABLE != 0) &&
+                   (CONFIG_UART_ENABLE != 0) && (CONFIG_LCD_ENABLE != 0);
+        case TEST_ENCODER:
+            return (CONFIG_ENCODER_ENABLE != 0) &&
+                   (CONFIG_KEY_ENABLE != 0) &&
+                   (CONFIG_UART_ENABLE != 0) && (CONFIG_LCD_ENABLE != 0);
+        case TEST_IMU:
+            return (CONFIG_IMU_ENABLE != 0) &&
+                   (CONFIG_UART_ENABLE != 0) && (CONFIG_LCD_ENABLE != 0);
+        case TEST_LCD: return CONFIG_LCD_ENABLE != 0;
+        case TEST_COUNT:
+        default:
+            return false;
+    }
+}
+
 void Test_Select(Test_Id_t id)
 {
-    if ((g_test == TEST_MOTOR) || (g_test == TEST_PID)) {
+    if (g_test == TEST_MOTOR) {
+        Motor_EmergencyStop();
+    } else if (g_test == TEST_PID) {
         Motor_EmergencyStop();
         CarControl_Stop();
     }
-    g_test = id;
+    g_test = Test_IsAvailable(id) ? id : TEST_NONE;
     g_lastTickMs = 0U;
     g_lastEncoderUpdateMs = 0U;
     g_lastPidReportMs = 0U;
+    g_lastTextReportMs = 0U;
     g_phase = 0U;
+    g_testDisplayLine = 0U;
     g_firstRun = true;
-    if (id == TEST_ENCODER) {
+    if (g_test == TEST_ENCODER) {
         (void)EncoderVerification_Init(&g_encoderVerification,
                                        ENCODER_VERIFY_TURNS);
     }
@@ -70,13 +106,14 @@ Test_Id_t Test_GetSelected(void)
     return g_test;
 }
 
-static void Test_RunKey(uint32_t nowMs)
+bool Test_UsesMotor(Test_Id_t id)
 {
-    
-    Key_Event_t event;
-    Key_Scan(nowMs);
-    event = Key_GetEvent();
-    if (event != KEY_EVENT_NONE) {
+    return (id == TEST_MOTOR) || (id == TEST_PID);
+}
+
+static void Test_RunKey(Key_Event_t event)
+{
+    if ((event > KEY_EVENT_NONE) && (event <= KEY_EVENT_LONG_PRESSED)) {
         static const char *const names[] = {
             "NONE", "PRESSED", "RELEASED", "CLICKED", "LONG"
         };
@@ -123,6 +160,8 @@ static void Test_RunMotor(uint32_t nowMs)
         elapsedMs = (uint32_t)(nowMs - g_lastEncoderUpdateMs);
         Encoder_UpdateSpeed((float)elapsedMs / 1000.0f);
         g_lastEncoderUpdateMs = nowMs;
+        /* 斜坡也固定按 10 ms 推进，不能随主循环空转速度变化。 */
+        Motor_RampUpdate();
     }
     if ((uint32_t)(nowMs - g_lastPidReportMs) >= 100U) {
         g_lastPidReportMs = nowMs;
@@ -133,7 +172,6 @@ static void Test_RunMotor(uint32_t nowMs)
                           (long)right.totalCount, (double)right.rpm);
     }
 
-    Motor_RampUpdate();
     if ((uint32_t)(nowMs - g_lastTickMs) <
         ((g_phase == 1U) ? MOTOR_TEST_STOP_MS : MOTOR_TEST_RUN_MS)) {
         return;
@@ -154,43 +192,42 @@ static void Test_RunMotor(uint32_t nowMs)
 static void Test_RunPid(uint32_t nowMs)
 {
     const CarControl_Data_t *data;
-    Key_Event_t event;
     char line[22];
 
     if (g_firstRun) {
         g_firstRun = false;
         g_lastTickMs = nowMs;
         g_lastPidReportMs = nowMs;
+        g_lastTextReportMs = nowMs;
         (void)CarControl_Enable(true);
-        (void)UART_Printf("PID TEST: target=%.1f RPM; click key to stop\r\n",
+        (void)UART_Printf("PID TEST: target=%.1f RPM; press key for emergency stop\r\n",
                           (double)PID_TEST_TARGET_RPM);
         (void)LCD_Clear(LCD_COLOR_BLACK);
-    }
-
-    Key_Scan(nowMs);
-    event = Key_GetEvent();
-    if ((event == KEY_EVENT_CLICKED) ||
-        (event == KEY_EVENT_LONG_PRESSED)) {
-        (void)UART_SendString(UART_ID_DEBUG, "PID TEST STOP\r\n");
-        Test_Select(TEST_NONE);
-        return;
     }
 
     if ((uint32_t)(nowMs - g_lastTickMs) < 10U) { return; }
     g_lastTickMs = nowMs;
     CarControl_UpdateSpeedTest(nowMs, PID_TEST_TARGET_RPM,
                                PID_TEST_TARGET_RPM);
-    if ((uint32_t)(nowMs - g_lastPidReportMs) < 100U) { return; }
+    if ((uint32_t)(nowMs - g_lastPidReportMs) <
+        PID_TEST_VOFA_PERIOD_MS) {
+        return;
+    }
     g_lastPidReportMs = nowMs;
 
     data = CarControl_GetData();
-    (void)UART_Printf("PID L=%.1f/%.1f D=%.0f R=%.1f/%.1f D=%.0f\r\n",
-                      (double)data->actualLeftRpm,
-                      (double)data->targetLeftRpm,
-                      (double)data->outputLeft,
-                      (double)data->actualRightRpm,
-                      (double)data->targetRightRpm,
-                      (double)data->outputRight);
+    if ((uint32_t)(nowMs - g_lastTextReportMs) >=
+        PID_TEST_TEXT_REPORT_MS) {
+        g_lastTextReportMs = nowMs;
+        (void)UART_Printf(
+            "PID L=%.1f/%.1f D=%.0f R=%.1f/%.1f D=%.0f\r\n",
+            (double)data->actualLeftRpm,
+            (double)data->targetLeftRpm,
+            (double)data->outputLeft,
+            (double)data->actualRightRpm,
+            (double)data->targetRightRpm,
+            (double)data->outputRight);
+    }
 #if PID_TEST_VOFA_ENABLE
     /* FireWater 通道：目标左、实际左、左 PWM、目标右、实际右、右 PWM。 */
     (void)UART_Printf("pid:%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\r\n",
@@ -201,17 +238,27 @@ static void Test_RunPid(uint32_t nowMs)
                       (double)data->actualRightRpm,
                       (double)data->outputRight);
 #endif
-    (void)snprintf(line, sizeof(line), "L %.0f/%.0f",
-                   (double)data->actualLeftRpm,
-                   (double)data->targetLeftRpm);
-    (void)LCD_ShowString(0U, 0U, line, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
-    (void)snprintf(line, sizeof(line), "R %.0f/%.0f",
-                   (double)data->actualRightRpm,
-                   (double)data->targetRightRpm);
-    (void)LCD_ShowString(0U, 24U, line, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
-    (void)snprintf(line, sizeof(line), "D %.0f %.0f",
-                   (double)data->outputLeft, (double)data->outputRight);
-    (void)LCD_ShowString(0U, 48U, line, LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
+    /* 每次只更新一行 LCD，避免调参串口和显示同时长时间阻塞。 */
+    if (g_testDisplayLine == 0U) {
+        (void)snprintf(line, sizeof(line), "L %.0f/%.0f",
+                       (double)data->actualLeftRpm,
+                       (double)data->targetLeftRpm);
+        (void)LCD_ShowString(0U, 0U, line,
+                             LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+    } else if (g_testDisplayLine == 1U) {
+        (void)snprintf(line, sizeof(line), "R %.0f/%.0f",
+                       (double)data->actualRightRpm,
+                       (double)data->targetRightRpm);
+        (void)LCD_ShowString(0U, 24U, line,
+                             LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+    } else {
+        (void)snprintf(line, sizeof(line), "D %.0f %.0f",
+                       (double)data->outputLeft,
+                       (double)data->outputRight);
+        (void)LCD_ShowString(0U, 48U, line,
+                             LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
+    }
+    g_testDisplayLine = (uint8_t)((g_testDisplayLine + 1U) % 3U);
 }
 
 static float Test_EncoderCountErrorPercent(float countsPerRev)
@@ -220,11 +267,10 @@ static float Test_EncoderCountErrorPercent(float countsPerRev)
            ENCODER_COUNTS_PER_WHEEL_REV;
 }
 
-static void Test_RunEncoder(uint32_t nowMs)
+static void Test_RunEncoder(uint32_t nowMs, Key_Event_t event)
 {
     Encoder_Data_t left;
     Encoder_Data_t right;
-    Key_Event_t event;
     uint32_t elapsedMs;
     char line[22];
 
@@ -244,8 +290,6 @@ static void Test_RunEncoder(uint32_t nowMs)
     }
 
     /* 按键第一次点击开始，第二次点击结束人工十圈校验。 */
-    Key_Scan(nowMs);
-    event = Key_GetEvent();
     if (event == KEY_EVENT_CLICKED) {
         (void)Encoder_GetData(ENCODER_LEFT, &left);
         (void)Encoder_GetData(ENCODER_RIGHT, &right);
@@ -371,7 +415,7 @@ static void Test_RunLcd(void)
     (void)LCD_ShowBitmap(96U, 96U, 16U, 16U, g_lcdCheckerboard);
 }
 
-void Test_Run(uint32_t nowMs)
+void Test_Run(uint32_t nowMs, Key_Event_t event)
 {
     switch (g_test) {
         case TEST_LED:
@@ -380,11 +424,11 @@ void Test_Run(uint32_t nowMs)
                 LED_Toggle();
             }
             break;
-        case TEST_KEY: Test_RunKey(nowMs); break;
+        case TEST_KEY: Test_RunKey(event); break;
         case TEST_TRACK: Test_RunTrack(nowMs); break;
         case TEST_MOTOR: Test_RunMotor(nowMs); break;
         case TEST_PID: Test_RunPid(nowMs); break;
-        case TEST_ENCODER: Test_RunEncoder(nowMs); break;
+        case TEST_ENCODER: Test_RunEncoder(nowMs, event); break;
         case TEST_IMU: Test_RunImu(nowMs); break;
         case TEST_LCD: Test_RunLcd(); break;
         case TEST_NONE:

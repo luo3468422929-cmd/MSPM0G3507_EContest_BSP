@@ -10,6 +10,7 @@
 #include "imu_protocol.h"
 #include "pid.h"
 #include "ring_buffer.h"
+#include "scheduler.h"
 #include "track_math.h"
 #include "encoder_decode.h"
 #include "encoder_speed_window.h"
@@ -81,6 +82,14 @@ static void Test_RingBuffer_WrapAndOverflow(void)
     CHECK_TRUE(RingBuffer_Pop(&rb, &value) == STATUS_OK && value == 1U);
     CHECK_TRUE(RingBuffer_Push(&rb, 5U) == STATUS_OK);
     CHECK_TRUE(RingBuffer_Count(&rb) == 4U);
+
+    /* 单调索引经过 uint16_t 回绕后，满/空和槽位寻址仍必须正确。 */
+    RingBuffer_Clear(&rb);
+    rb.head = UINT16_MAX;
+    rb.tail = UINT16_MAX;
+    CHECK_TRUE(RingBuffer_Push(&rb, 9U) == STATUS_OK);
+    CHECK_TRUE(RingBuffer_Count(&rb) == 1U);
+    CHECK_TRUE(RingBuffer_Pop(&rb, &value) == STATUS_OK && value == 9U);
 }
 
 static void Test_ImuProtocol_ValidAndResync(void)
@@ -141,6 +150,17 @@ static void Test_TrackMath_FiveChannels(void)
     CHECK_NEAR(TrackMath_WeightedPosition(0x18U, weights, 5U), 3.0f, 0.0001f);
 }
 
+static void Test_Scheduler_SkipsMissedPeriods(void)
+{
+    Scheduler_Init(0U);
+
+    /* 35 ms 才轮询 10 ms 任务时只执行一次，不能在同一 nowMs 连续补跑。 */
+    CHECK_TRUE(Scheduler_IsDue(SCHEDULER_TASK_10_MS, 35U));
+    CHECK_TRUE(!Scheduler_IsDue(SCHEDULER_TASK_10_MS, 35U));
+    CHECK_TRUE(!Scheduler_IsDue(SCHEDULER_TASK_10_MS, 44U));
+    CHECK_TRUE(Scheduler_IsDue(SCHEDULER_TASK_10_MS, 45U));
+}
+
 static void Test_EncoderSpeedWindow_Fixed50MsAndAdaptive100Ms(void)
 {
     EncoderSpeedWindow_t window;
@@ -162,7 +182,8 @@ static void Test_EncoderSpeedWindow_Fixed50MsAndAdaptive100Ms(void)
     CHECK_TRUE(EncoderSpeedWindow_Push(&window, 0, 0.01f, 0.05f,
                                       countsPerWheelRev, &rpm, &ready) == STATUS_OK);
     CHECK_TRUE(ready);
-    CHECK_NEAR(rpm, 60.0f / (countsPerWheelRev * 0.05f), 0.0001f);
+    /* 第一个脉冲已滑出最新 50 ms 时间窗，转速应回到 0。 */
+    CHECK_NEAR(rpm, 0.0f, 0.0001f);
 
     CHECK_TRUE(EncoderSpeedWindow_Init(&window) == STATUS_OK);
     CHECK_TRUE(EncoderSpeedWindow_Push(&window, 4, 0.1f, 0.05f,
@@ -249,6 +270,7 @@ int main(void)
     Test_PID_Incremental();
     Test_Filter_MovingAverage();
     Test_RingBuffer_WrapAndOverflow();
+    Test_Scheduler_SkipsMissedPeriods();
     Test_ImuProtocol_ValidAndResync();
     Test_FrameProtocol_VariableLengthAndChecksum();
     Test_TrackMath_PositionAndLost();

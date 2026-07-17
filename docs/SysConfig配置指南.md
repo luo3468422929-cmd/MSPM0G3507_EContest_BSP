@@ -1,26 +1,34 @@
 # SysConfig 配置指南
 
-## 比赛时换引脚
+## 正确修改方式
 
-1. 双击 `empty.syscfg`，只修改带逻辑名的资源，不编辑生成的 `ti_msp_dl_config.c/.h`。
-2. 保持逻辑名不变，例如 `MOTOR_AIN1`、`TRACK_I2C`、`LCD_SPI`。这样 `Bsp/board_pins.h` 和上层代码通常不用改。
-3. 若必须改逻辑名，再同步修改 `Bsp/board_pins.h` 中对应别名。
-4. 检查 SysConfig 的 PinMux 冲突与电源/时钟警告。
-5. 运行 `Tests/Build/verify_build.ps1`，确认生成、编译、链接全部通过。
+1. 双击根目录 `empty.syscfg`；
+2. 修改带逻辑名的引脚或外设实例；
+3. 尽量保持 `MOTOR_AIN1`、`TRACK_I2C`、`LCD_SPI` 等逻辑名；
+4. 保存后让 CCS/SysConfig 重新生成；
+5. 运行 `Tests/Build/verify_build.ps1`；
+6. 不编辑 `Debug/syscfg/ti_msp_dl_config.c/.h`。
 
-## 当前外设配置
+若逻辑名也改变，再同步 `Bsp/board_pins.h` 的别名。
 
-- `MOTOR_PWM`：TIMG0，PA12=C0、PA13=C1，周期计数 1000。
-- `ENCODER_LEFT_CAPTURE`：TIMA1_C0 / PA17，双边沿捕获中断。
-- `ENCODER_RIGHT_CAPTURE`：TIMG8_C1 / PB19，双边沿捕获中断。
-- `DEBUG_UART`：UART0，TX=PA10、RX=PA11，115200，RX 中断。
-- `IMU_UART`：UART2，PA21/PA22，115200，RX 中断。
-- `TRACK_I2C`：I2C0，SDA=PA28、SCL=PA31，Fast 400 kHz，控制器模式。
-- `LCD_SPI`：SPI1，PB9/PB8，PICO-only，4 MHz，CPOL=1、CPHA=1。
-- `SYSTICK`：1 ms 系统节拍。
+## 当前配置
 
-PA2 不允许出现任何 `pin.$assign = "PA2"`。八路模块固定使用 I2C0 PA28/PA31。
+- PWM：TIMG0，PA12=C0、PA13=C1，周期 1000。
+- 编码器：PA17/PA16、PB19/PB20 均为 GPIO 输入、内部上拉、上升沿中断。
+- UART0 调试：PA10 TX、PA11 RX，115200 RX 中断，板载 CH340。
+- UART2 惯导：PA21 TX、PA22 RX，115200 RX 中断。
+- I2C0 循迹：PA28 SDA、PA31 SCL，Fast 400 kHz。
+- SPI1 LCD：PB9 SCK、PB8 MOSI，4 MHz，CPOL=1、CPHA=1。
+- LCD 控制：PA27 CS、PA26 DC、PA25 RES；BL 直连 3.3 V。
+- SysTick：1 ms。
 
-## 换一种外设
+## 保留引脚
 
-例如更换 LCD：先在 SysConfig 建立新总线和控制引脚，再在 `Hardware/` 新建驱动，保持 `LCD_*` 公共接口，最后在 `Bsp/board_pins.h` 做逻辑名映射。不要让 `User/task.c` 直接调用 `DL_GPIO_*` 或 `DL_SPI_*`。
+- PA0、PA1：当前不配置，也不作为现场首选 I2C；确需使用时确认开发板连接并配置外部上拉。
+- PA2：地猛星 ROSC 相关，保持不分配。
+- PA24：LCD 不再使用，当前留空。
+- PA19/PA20：SWD 调试。
+
+## 换一种器件
+
+先在 SysConfig 建立总线和控制脚，再在 `Hardware` 增加驱动。若能保持现有公共接口（例如继续提供 `Track_Update()` / `Track_GetData()`），`Control` 和比赛状态机可以不随协议变化。

@@ -47,7 +47,14 @@ Require-NamedPin -Name 'USER_KEY' -Pin 'PB2'
 Require-NamedPin -Name 'LCD_CS' -Pin 'PA27'
 Require-NamedPin -Name 'LCD_DC' -Pin 'PA26'
 Require-NamedPin -Name 'LCD_RES' -Pin 'PA25'
-Require-NamedPin -Name 'LCD_BL' -Pin 'PA24'
+if ($syscfg -cmatch '\$name\s*=\s*"LCD_BL"') {
+    throw 'LCD BL is hardwired to 3.3 V and must not consume PA24'
+}
+foreach ($unusedPin in @('PA24', 'PA0', 'PA1')) {
+    if ($syscfg -cmatch ('["'']' + [regex]::Escape($unusedPin) + '["'']')) {
+        throw "$unusedPin must remain unconfigured"
+    }
+}
 
 Require-Pattern 'PWM1\.peripheral\.ccp0Pin\.\$assign\s*=\s*"PA12"' `
     'left motor PWM must use PA12/TIMG0_C0'

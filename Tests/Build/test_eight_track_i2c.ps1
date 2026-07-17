@@ -86,7 +86,7 @@ if ($trackSource -cmatch 'PIN_TRACK_CH[1-5]') {
 
 Require-Pattern $testSource 'TRACK mask=%02X error=%.2f i2c=%s' `
     'TEST_TRACK must report the I2C link status'
-Require-Pattern $testGuide 'SDA\s*→\s*PA28[\s\S]*SCL\s*→\s*PA31' `
+Require-Pattern $testGuide 'SDA[^\r\n]*PA28[\s\S]*SCL[^\r\n]*PA31' `
     'test guide must document PA28/PA31 tracker wiring'
 Require-Pattern $testGuide '0x12[\s\S]*0x30' `
     'test guide must document the tracker address and register'

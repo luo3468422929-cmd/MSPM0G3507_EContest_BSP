@@ -29,7 +29,7 @@ const UART2   = UART.addInstance();
  */
 GPIO1.$name                              = "GPIO_A";
 GPIO1.port                               = "PORTA";
-GPIO1.associatedPins.create(12);
+GPIO1.associatedPins.create(9);
 GPIO1.associatedPins[0].$name            = "MOTOR_AIN2";
 GPIO1.associatedPins[0].assignedPin      = "7";
 GPIO1.associatedPins[0].pin.$assign      = "PA7";
@@ -60,18 +60,13 @@ GPIO1.associatedPins[7].$name            = "LCD_RES";
 GPIO1.associatedPins[7].initialValue     = "SET";
 GPIO1.associatedPins[7].assignedPin      = "25";
 GPIO1.associatedPins[7].pin.$assign      = "PA25";
-GPIO1.associatedPins[8].$name            = "LCD_BL";
-GPIO1.associatedPins[8].assignedPin      = "24";
-GPIO1.associatedPins[8].pin.$assign      = "PA24";
-GPIO1.associatedPins[9].$name            = "ENCODER_LEFT_A";
-GPIO1.associatedPins[9].direction        = "INPUT";
-GPIO1.associatedPins[9].interruptEn      = true;
-GPIO1.associatedPins[9].polarity         = "RISE";
-GPIO1.associatedPins[9].assignedPin      = "17";
-GPIO1.associatedPins[9].internalResistor = "PULL_UP";
-GPIO1.associatedPins[9].pin.$assign      = "PA17";
-GPIO1.associatedPins[10].$name           = "PIN_12";
-GPIO1.associatedPins[11].$name           = "PIN_13";
+GPIO1.associatedPins[8].$name            = "ENCODER_LEFT_A";
+GPIO1.associatedPins[8].direction        = "INPUT";
+GPIO1.associatedPins[8].interruptEn      = true;
+GPIO1.associatedPins[8].polarity         = "RISE";
+GPIO1.associatedPins[8].assignedPin      = "17";
+GPIO1.associatedPins[8].internalResistor = "PULL_UP";
+GPIO1.associatedPins[8].pin.$assign      = "PA17";
 
 const Board                       = scripting.addModule("/ti/driverlib/Board", {}, false);
 Board.peripheral.$assign          = "DEBUGSS";
@@ -85,6 +80,7 @@ GPIO2.associatedPins[0].$name            = "MOTOR_AIN1";
 GPIO2.associatedPins[0].assignedPin      = "18";
 GPIO2.associatedPins[0].pin.$assign      = "PB18";
 GPIO2.associatedPins[1].$name            = "MOTOR_STBY";
+GPIO2.associatedPins[1].initialValue     = "CLEARED";
 GPIO2.associatedPins[1].assignedPin      = "24";
 GPIO2.associatedPins[1].pin.$assign      = "PB24";
 GPIO2.associatedPins[2].$name            = "ENCODER_RIGHT_B";
@@ -198,11 +194,3 @@ UART2.rxPinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric11";
 UART2.rxPinConfig.hideOutputInversion  = scripting.forceWrite(false);
 UART2.rxPinConfig.onlyInternalResistor = scripting.forceWrite(false);
 UART2.rxPinConfig.passedPeripheralType = scripting.forceWrite("Digital");
-
-/**
- * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
- * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
- * re-solve from scratch.
- */
-GPIO1.associatedPins[10].pin.$suggestSolution = "PA1";
-GPIO1.associatedPins[11].pin.$suggestSolution = "PA0";

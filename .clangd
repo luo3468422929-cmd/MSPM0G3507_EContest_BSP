@@ -1,8 +1,4 @@
-# This is an auto-generated file - do not add it to source-control
+# 使用 CCS 生成的编译数据库；保留诊断，避免 VS Code 把真实错误全部隐藏。
 
 CompileFlags:
    CompilationDatabase: Debug/.clangd
-
-Diagnostics:
-   Suppress: '*'
-

@@ -15,4 +15,14 @@ if ($readme -cnotmatch 'PA28' -or $readme -cnotmatch 'PA31' -or
     $readme -cnotmatch 'PB2') {
     throw 'README must state the I2C tracker and key wiring'
 }
+$overviewPath = Join-Path $project 'docs\项目总览与使用指南.md'
+if (-not (Test-Path -LiteralPath $overviewPath -PathType Leaf)) {
+    throw 'Beginner project overview is missing'
+}
+$overview = Get-Content -LiteralPath $overviewPath -Raw
+foreach ($token in 'STARTUP_TEST','ARMING','CH340','PA0','PA1','verify_build.ps1') {
+    if ($overview -cnotmatch [regex]::Escape($token)) {
+        throw "Project overview is missing: $token"
+    }
+}
 Write-Output 'BEGINNER DOC CHECK PASSED'

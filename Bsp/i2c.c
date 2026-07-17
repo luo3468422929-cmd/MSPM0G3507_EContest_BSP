@@ -40,15 +40,22 @@ static bool I2C_AddressIsValid(uint8_t address)
     return address <= 0x7FU;
 }
 
-Status_t I2C_ReadRegister(uint8_t address, uint8_t reg,
-                          uint8_t *data, uint8_t length)
+static void I2C_RecoverController(I2C_Regs *instance)
 {
-    I2C_Regs *instance = PIN_TRACK_I2C_INST;
-    Status_t status;
+    /*
+     * 清除上一次 NACK/超时留下的传输状态和 FIFO，再允许下一次重试。
+     * 如果外设把 SDA 物理拉低，本操作无法释放线路，需要复位或断电排查。
+     */
+    DL_I2C_resetControllerTransfer(instance);
+    DL_I2C_flushControllerTXFIFO(instance);
+    DL_I2C_flushControllerRXFIFO(instance);
+}
 
-    if (!I2C_AddressIsValid(address) || (data == NULL) || (length == 0U)) {
-        return STATUS_INVALID_PARAM;
-    }
+static Status_t I2C_ReadRegisterOnce(I2C_Regs *instance, uint8_t address,
+                                     uint8_t reg, uint8_t *data,
+                                     uint8_t length)
+{
+    Status_t status;
 
     status = I2C_WaitIdle(instance);
     if (status != STATUS_OK) {
@@ -81,20 +88,33 @@ Status_t I2C_ReadRegister(uint8_t address, uint8_t reg,
     return I2C_WaitIdle(instance);
 }
 
-Status_t I2C_WriteRegister(uint8_t address, uint8_t reg,
-                           const uint8_t *data, uint8_t length)
+Status_t I2C_ReadRegister(uint8_t address, uint8_t reg,
+                          uint8_t *data, uint8_t length)
 {
     I2C_Regs *instance = PIN_TRACK_I2C_INST;
-    uint8_t packet[4];
     Status_t status;
 
-    if (!I2C_AddressIsValid(address) ||
-        ((data == NULL) && (length != 0U))) {
+    if (!I2C_AddressIsValid(address) || (data == NULL) || (length == 0U)) {
         return STATUS_INVALID_PARAM;
     }
-    if (length > (uint8_t)(sizeof(packet) - 1U)) {
-        return STATUS_OVERFLOW;
+
+    for (uint8_t attempt = 0U; attempt <= I2C_RECOVERY_RETRY_COUNT;
+         ++attempt) {
+        status = I2C_ReadRegisterOnce(instance, address, reg, data, length);
+        if (status == STATUS_OK) {
+            return STATUS_OK;
+        }
+        I2C_RecoverController(instance);
     }
+    return status;
+}
+
+static Status_t I2C_WriteRegisterOnce(I2C_Regs *instance, uint8_t address,
+                                      uint8_t reg, const uint8_t *data,
+                                      uint8_t length)
+{
+    uint8_t packet[4];
+    Status_t status;
 
     packet[0] = reg;
     if (length != 0U) {
@@ -116,5 +136,30 @@ Status_t I2C_WriteRegister(uint8_t address, uint8_t reg,
                                    (uint16_t)length + 1U);
     status = I2C_WaitIdle(instance);
     DL_I2C_flushControllerTXFIFO(instance);
+    return status;
+}
+
+Status_t I2C_WriteRegister(uint8_t address, uint8_t reg,
+                           const uint8_t *data, uint8_t length)
+{
+    I2C_Regs *instance = PIN_TRACK_I2C_INST;
+    Status_t status;
+
+    if (!I2C_AddressIsValid(address) ||
+        ((data == NULL) && (length != 0U))) {
+        return STATUS_INVALID_PARAM;
+    }
+    if (length > 3U) {
+        return STATUS_OVERFLOW;
+    }
+
+    for (uint8_t attempt = 0U; attempt <= I2C_RECOVERY_RETRY_COUNT;
+         ++attempt) {
+        status = I2C_WriteRegisterOnce(instance, address, reg, data, length);
+        if (status == STATUS_OK) {
+            return STATUS_OK;
+        }
+        I2C_RecoverController(instance);
+    }
     return status;
 }

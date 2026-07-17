@@ -12,12 +12,34 @@ $ErrorActionPreference = 'Stop'
 & (Join-Path $PSScriptRoot 'test_imu_lcd_display.ps1')
 & (Join-Path $PSScriptRoot 'test_user_api.ps1')
 & (Join-Path $PSScriptRoot 'test_beginner_docs.ps1')
+& (Join-Path $PSScriptRoot 'test_safety_state.ps1')
+& (Join-Path $PSScriptRoot 'test_runtime_hardening.ps1')
+& (Join-Path $PSScriptRoot 'test_pin_and_control_config.ps1')
+& (Join-Path $PSScriptRoot 'test_feature_flags.ps1')
+& (Join-Path $PSScriptRoot 'test_no_host_objects.ps1')
+& (Join-Path $PSScriptRoot 'test_review_feedback.ps1')
+& (Join-Path $PSScriptRoot 'test_vscode_config.ps1')
+& (Join-Path (Split-Path -Parent $PSScriptRoot) 'Host\run_tests.ps1')
 
 $project = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $sdk = 'C:\TI\mspm0_sdk_2_10_00_04'
 $sysconfig = 'C:\TI\sysconfig_1.26.2\sysconfig_cli.bat'
-$compilerRoot = 'C:\TI\ti_cgt_arm_llvm_4.0.2.LTS'
-$compiler = Join-Path $compilerRoot 'bin\tiarmclang.exe'
+$vscodeConfig = Get-Content -LiteralPath `
+    (Join-Path $project '.vscode\c_cpp_properties.json') -Raw |
+    ConvertFrom-Json
+$configuredCompiler = $vscodeConfig.configurations[0].compilerPath
+$compilerCandidates = @(
+    $configuredCompiler
+    'C:\TI\ti_cgt_arm_llvm_4.0.2.LTS\bin\tiarmclang.exe'
+)
+$compiler = $compilerCandidates |
+    Where-Object { Test-Path -LiteralPath $_ } |
+    Select-Object -First 1
+if ([string]::IsNullOrWhiteSpace($compiler)) {
+    throw 'TI Arm Clang was not found in VS Code configuration or fallback path'
+}
+$compilerRoot = Split-Path -Parent (Split-Path -Parent $compiler)
+Write-Output "TI COMPILER: $compiler"
 $output = Join-Path $project 'Debug\full_verify'
 $syscfgOutput = Join-Path $project 'Debug\syscfg'
 

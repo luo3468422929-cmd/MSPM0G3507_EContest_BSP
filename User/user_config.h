@@ -16,29 +16,54 @@
 #define CONFIG_ENCODER_ENABLE             1
 #define CONFIG_TRACK_ENABLE               1
 #define CONFIG_LCD_ENABLE                 1
+#define CONFIG_CAR_CONTROL_ENABLE         1
+
+/* 功能依赖在编译期直接报错，避免比赛现场出现“能编译但一定不能跑”。 */
+#if CONFIG_CAR_CONTROL_ENABLE && \
+    (!CONFIG_MOTOR_ENABLE || !CONFIG_ENCODER_ENABLE || \
+     !CONFIG_TRACK_ENABLE || !CONFIG_KEY_ENABLE)
+#error "Car control requires motor, encoder, track and key"
+#endif
+#if CONFIG_IMU_ENABLE && !CONFIG_UART_ENABLE
+#error "IMU requires UART"
+#endif
+
+/*
+ * 上电测试入口。正常跑车保持 TEST_NONE；测试模块时只改这里。
+ * 可选值见 User/test.h，例如 TEST_LCD、TEST_TRACK、TEST_ENCODER、
+ * TEST_MOTOR、TEST_PID。宏在使用处展开，因此这里不需要包含 test.h。
+ */
+#define STARTUP_TEST                      TEST_NONE
 
 /* 系统节拍。 */
 #define SYSTEM_TICK_HZ                    1000U
 #define SYSTEM_CLOCK_HZ                   32000000U
+#if SYSTEM_TICK_HZ == 0U
+#error "SYSTEM_TICK_HZ must be greater than zero"
+#endif
 
 /* LED 与按键。临时按键为低电平有效，已在 SysConfig 中配置上拉。 */
 #define LED_ACTIVE_HIGH                   1
 #define KEY_ACTIVE_LOW                    1
 #define KEY_DEBOUNCE_MS                   20U
 #define KEY_LONG_PRESS_MS                 800U
-#define AUTO_START_ON_BOOT                1     /* 正常模式上电后自动进入 RUN。 */
+#define AUTO_START_ON_BOOT                1     /* 正常模式满足就绪条件后自动运行。 */
+#define AUTO_START_DELAY_MS               1000U /* 上电后至少等待 1 秒再使能电机。 */
+#define AUTO_START_VALID_FRAMES           5U    /* 连续有效循迹帧数，防止误启动。 */
 
 /* TB6612 和电机。方向不一致时只改 REVERSED，不改 motor.c。 */
 #define MOTOR_MAX_DUTY                    1000
 #define MOTOR_MIN_START_DUTY              80
 #define MOTOR_RAMP_STEP                   40
 #define MOTOR_TEST_DUTY                   120  /* 低占空比开环编码器诊断 PWM。 */
-#define MOTOR_TEST_RUN_MS                30000U /* 每个方向持续 30 秒，便于观察异常。 */
+#define MOTOR_TEST_RUN_MS                 5000U /* 每个方向持续 5 秒，便于安全测试。 */
 #define MOTOR_TEST_STOP_MS                1000U /* 正反转之间的停车时间。 */
 #define MOTOR_LEFT_REVERSED               0
 #define MOTOR_RIGHT_REVERSED              1
 #define PID_TEST_TARGET_RPM               40.0f /* 独立速度环测试目标。 */
 #define PID_TEST_VOFA_ENABLE              1     /* 输出 FireWater CSV 调参帧。 */
+#define PID_TEST_VOFA_PERIOD_MS           100U  /* 波形采样周期。 */
+#define PID_TEST_TEXT_REPORT_MS           500U  /* 人类可读串口输出降频。 */
 
 /* 编码器与轮组机械参数。 */
 #define ENCODER_LEFT_REVERSED             0
@@ -62,8 +87,11 @@
 #define TRACK_I2C_ADDRESS                 0x12U
 #define TRACK_I2C_STATUS_REGISTER         0x30U
 #define TRACK_I2C_TIMEOUT_LOOPS           200000U
+#define I2C_RECOVERY_RETRY_COUNT           1U /* 超时/NACK 后复位控制器并重试一次。 */
 #define TRACK_BLACK_IS_HIGH               0
 #define TRACK_ACTIVE_THRESHOLD            500U
+#define TRACK_SENSOR_REVERSED              0 /* 1：传感器左右安装方向与权重相反。 */
+#define TRACK_ALL_ACTIVE_IS_LINE           0 /* 0：全黑按停止/终点处理；1：继续循迹。 */
 
 /* ST7735S。若上板出现整体偏移，只微调 OFFSET；颜色方向异常再改 MADCTL。 */
 #define LCD_X_OFFSET                      2U
@@ -74,5 +102,27 @@
 /* 10 ms 控制周期及默认速度。 */
 #define CONTROL_SAMPLE_TIME_S             0.010f
 #define CAR_DEFAULT_BASE_SPEED_RPM        30.0f
+#define CAR_MAX_TARGET_RPM                120.0f
+#define CAR_ALLOW_REVERSE_WHEEL            0 /* 普通循迹时禁止单轮突然反转。 */
+
+/* 左右速度环独立参数。电机或轮组更换后可分别在这里整定。 */
+#define SPEED_PID_LEFT_KP                  6.0f
+#define SPEED_PID_LEFT_KI                  1.0f
+#define SPEED_PID_LEFT_KD                  0.0f
+#define SPEED_PID_RIGHT_KP                 6.0f
+#define SPEED_PID_RIGHT_KI                 1.0f
+#define SPEED_PID_RIGHT_KD                 0.0f
+#define SPEED_PID_INTEGRAL_LIMIT         300.0f
+#define SPEED_PID_INTEGRAL_SEPARATION    150.0f
+#define SPEED_PID_DEADBAND                 0.5f
+
+/* 循迹位置环输出的是左右轮目标转速差，不直接输出 PWM。 */
+#define STEERING_PID_KP                   20.0f
+#define STEERING_PID_KI                    0.0f
+#define STEERING_PID_KD                    2.0f
+#define STEERING_OUTPUT_LIMIT            120.0f
+#define STEERING_INTEGRAL_LIMIT           20.0f
+#define STEERING_INTEGRAL_SEPARATION       3.0f
+#define STEERING_DEADBAND                  0.02f
 
 #endif

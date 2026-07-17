@@ -7,8 +7,15 @@ static volatile uint32_t g_tickMs;
 
 Status_t Timer_Init(void)
 {
+    uint32_t reload = SYSTEM_CLOCK_HZ / SYSTEM_TICK_HZ;
+
+    if (reload == 0U) {
+        return STATUS_INVALID_PARAM;
+    }
     g_tickMs = 0U;
-    SysTick_Config(SYSTEM_CLOCK_HZ / SYSTEM_TICK_HZ);
+    if (SysTick_Config(reload) != 0U) {
+        return STATUS_ERROR;
+    }
     return STATUS_OK;
 }
 

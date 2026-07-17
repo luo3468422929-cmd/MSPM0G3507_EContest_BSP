@@ -308,9 +308,6 @@ Status_t LCD_ShowFloat(uint16_t x, uint16_t y, float value,
 
 void LCD_SetBacklight(bool on)
 {
-    if (on) {
-        DL_GPIO_setPins(PIN_LCD_BL_PORT, PIN_LCD_BL);
-    } else {
-        DL_GPIO_clearPins(PIN_LCD_BL_PORT, PIN_LCD_BL);
-    }
+    /* 当前 PCB 的 LCD BL 直连 3.3 V；保留接口只为兼容旧应用代码。 */
+    (void)on;
 }

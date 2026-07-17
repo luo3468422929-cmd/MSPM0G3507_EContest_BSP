@@ -51,14 +51,22 @@ void IMU_Process(uint32_t nowMs)
     }
 }
 
-Status_t IMU_GetSample(ImuSample_t *sample)
+Status_t IMU_PeekSample(ImuSample_t *sample)
 {
     if (sample == NULL) {
         return STATUS_INVALID_PARAM;
     }
     *sample = g_sample;
-    g_newData = false;
     return (sample->yawValid || sample->gyroZValid) ? STATUS_OK : STATUS_EMPTY;
+}
+
+Status_t IMU_GetSample(ImuSample_t *sample)
+{
+    Status_t status = IMU_PeekSample(sample);
+    if (status != STATUS_INVALID_PARAM) {
+        g_newData = false;
+    }
+    return status;
 }
 
 bool IMU_HasNewData(void)

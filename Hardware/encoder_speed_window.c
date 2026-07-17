@@ -1,5 +1,8 @@
 #include "encoder_speed_window.h"
 
+/* 0.01f 累加五次可能略小于 0.05f，比较时保留 1 us 浮点容差。 */
+#define ENCODER_SPEED_WINDOW_EPSILON_S 0.000001f
+
 static void EncoderSpeedWindow_RemoveOldest(EncoderSpeedWindow_t *window)
 {
     uint8_t index;
@@ -60,13 +63,15 @@ Status_t EncoderSpeedWindow_Push(EncoderSpeedWindow_t *window,
     while (window->sampleCount > 1U) {
         uint8_t oldest = window->oldestIndex;
         float remainingTimeS = window->totalTimeS - window->durationS[oldest];
-        if (remainingTimeS < requiredWindowS) {
+        if ((remainingTimeS + ENCODER_SPEED_WINDOW_EPSILON_S) <
+            requiredWindowS) {
             break;
         }
         EncoderSpeedWindow_RemoveOldest(window);
     }
 
-    if (window->totalTimeS >= requiredWindowS) {
+    if ((window->totalTimeS + ENCODER_SPEED_WINDOW_EPSILON_S) >=
+        requiredWindowS) {
         *rpm = ((float)window->totalDeltaCount * 60.0f) /
                (countsPerWheelRev * window->totalTimeS);
         *ready = true;

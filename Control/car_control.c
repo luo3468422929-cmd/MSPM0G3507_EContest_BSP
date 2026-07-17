@@ -17,26 +17,38 @@ static Status_t CarControl_InitPids(void)
 {
     /* 左右轮各持有一份独立参数，电机差异明显时可分别整定。 */
     const PID_Config_t leftConfig = {
-        .kp = 6.0f, .ki = 1.0f, .kd = 0.0f,
+        .kp = SPEED_PID_LEFT_KP,
+        .ki = SPEED_PID_LEFT_KI,
+        .kd = SPEED_PID_LEFT_KD,
         .sampleTimeS = CONTROL_SAMPLE_TIME_S,
         .outputMin = -MOTOR_MAX_DUTY, .outputMax = MOTOR_MAX_DUTY,
-        .integralMin = -300.0f, .integralMax = 300.0f,
-        .integralSeparation = 150.0f, .deadband = 0.5f
+        .integralMin = -SPEED_PID_INTEGRAL_LIMIT,
+        .integralMax = SPEED_PID_INTEGRAL_LIMIT,
+        .integralSeparation = SPEED_PID_INTEGRAL_SEPARATION,
+        .deadband = SPEED_PID_DEADBAND
     };
     const PID_Config_t rightConfig = {
-        /* 右轮本轮调参起点：先关闭积分、微分，降低比例增益观察振荡。 */
-        .kp = 6.0f, .ki = 1.0f, .kd = 0.0f,
+        .kp = SPEED_PID_RIGHT_KP,
+        .ki = SPEED_PID_RIGHT_KI,
+        .kd = SPEED_PID_RIGHT_KD,
         .sampleTimeS = CONTROL_SAMPLE_TIME_S,
         .outputMin = -MOTOR_MAX_DUTY, .outputMax = MOTOR_MAX_DUTY,
-        .integralMin = -300.0f, .integralMax = 300.0f,
-        .integralSeparation = 150.0f, .deadband = 0.5f
+        .integralMin = -SPEED_PID_INTEGRAL_LIMIT,
+        .integralMax = SPEED_PID_INTEGRAL_LIMIT,
+        .integralSeparation = SPEED_PID_INTEGRAL_SEPARATION,
+        .deadband = SPEED_PID_DEADBAND
     };
     const PID_Config_t steeringConfig = {
-        .kp = 20.0f, .ki = 0.0f, .kd = 2.0f,
+        .kp = STEERING_PID_KP,
+        .ki = STEERING_PID_KI,
+        .kd = STEERING_PID_KD,
         .sampleTimeS = CONTROL_SAMPLE_TIME_S,
-        .outputMin = -120.0f, .outputMax = 120.0f,
-        .integralMin = -20.0f, .integralMax = 20.0f,
-        .integralSeparation = 3.0f, .deadband = 0.02f
+        .outputMin = -STEERING_OUTPUT_LIMIT,
+        .outputMax = STEERING_OUTPUT_LIMIT,
+        .integralMin = -STEERING_INTEGRAL_LIMIT,
+        .integralMax = STEERING_INTEGRAL_LIMIT,
+        .integralSeparation = STEERING_INTEGRAL_SEPARATION,
+        .deadband = STEERING_DEADBAND
     };
     Status_t status = PID_Init(&g_leftSpeedPid, &leftConfig);
     if (status != STATUS_OK) { return status; }
@@ -73,7 +85,8 @@ void CarControl_Enable(bool enable)
 
 void CarControl_SetBaseSpeed(float rpm)
 {
-    g_data.baseSpeedRpm = (rpm < 0.0f) ? 0.0f : rpm;
+    g_data.baseSpeedRpm = Common_ClampFloat(rpm, 0.0f,
+                                            CAR_MAX_TARGET_RPM);
 }
 
 static void CarControl_UpdateEncoder(uint32_t nowMs)
@@ -103,8 +116,13 @@ static void CarControl_ReadEncoderData(Encoder_Data_t *left,
 
 static void CarControl_RunSpeedPid(float targetLeftRpm, float targetRightRpm)
 {
-    g_data.targetLeftRpm = targetLeftRpm;
-    g_data.targetRightRpm = targetRightRpm;
+    const float minimumRpm = (CAR_ALLOW_REVERSE_WHEEL != 0) ?
+                             -CAR_MAX_TARGET_RPM : 0.0f;
+
+    g_data.targetLeftRpm = Common_ClampFloat(
+        targetLeftRpm, minimumRpm, CAR_MAX_TARGET_RPM);
+    g_data.targetRightRpm = Common_ClampFloat(
+        targetRightRpm, minimumRpm, CAR_MAX_TARGET_RPM);
     g_data.outputLeft = PID_UpdatePosition(&g_leftSpeedPid,
         g_data.targetLeftRpm, g_data.actualLeftRpm);
     g_data.outputRight = PID_UpdatePosition(&g_rightSpeedPid,
@@ -160,7 +178,6 @@ void CarControl_UpdateSpeedTest(uint32_t nowMs, float targetLeftRpm,
     g_data.positionError = 0.0f;
     g_data.lineFound = true;
     g_data.steering = 0.0f;
-    g_data.baseSpeedRpm = (targetLeftRpm + targetRightRpm) * 0.5f;
     if (!g_data.enabled) {
         return;
     }

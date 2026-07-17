@@ -16,8 +16,11 @@ bool Scheduler_IsDue(Scheduler_Task_t task, uint32_t nowMs)
         return false;
     }
     if ((uint32_t)(nowMs - g_lastRunMs[task]) >= g_periodMs[task]) {
-        /* 按周期推进而非直接赋 now，降低主循环抖动造成的长期漂移。 */
-        g_lastRunMs[task] += g_periodMs[task];
+        /*
+         * 主循环被 LCD/UART 阻塞后直接以实际时间重新起算。
+         * 这样会跳过错过的周期，不会在同一 nowMs 连续补跑多个控制任务。
+         */
+        g_lastRunMs[task] = nowMs;
         return true;
     }
     return false;
