@@ -26,7 +26,7 @@ https://github.com/luo3468422929-cmd/MSPM0G3507_EContest_BSP
 
 当前基线：
 先执行 git log -1 --oneline 获取最新 commit，不要假设旧 commit 仍是最新。
-当前已知基线为：043f23a
+文档编写时参考基线为：043f23a；实际工作前必须以命令输出的最新 commit 为准。
 
 如果当前工作区可以访问，请先执行并检查：
 
