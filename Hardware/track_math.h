@@ -2,7 +2,7 @@
  * @file track_math.h
  * @brief 定义与具体传感器总线无关的循迹加权位置计算。
  *
- * 所属层：Hardware 纯算法。既支持连续灰度值加权，也支持八路数字位图
+ * 所属层：Hardware 纯算法。既支持连续灰度值加权，也支持最多 12 路数字位图
  * 的离散权重平均，可直接用于 Host 测试。
  */
 #ifndef TRACK_MATH_H
@@ -39,10 +39,10 @@ Status_t TrackMath_Calculate(const uint16_t *values,
  * @brief 根据已触发通道的位图计算离散加权位置。
  * @param activeMask bit0 对应最左侧第 1 路。
  * @param weights 各通道位置权重数组，bit0 对应最左侧第 1 路。
- * @param count 通道数，合法范围 1~8。
+ * @param count 通道数，合法范围 1~12。
  * @return 已触发通道权重的平均值；无通道触发或参数非法时返回 0。
  */
-float TrackMath_WeightedPosition(uint8_t activeMask,
+float TrackMath_WeightedPosition(uint16_t activeMask,
                                  const float *weights,
                                  uint8_t count);
 

@@ -13,6 +13,7 @@
 #include "scheduler.h"
 #include "task_safety.h"
 #include "track_math.h"
+#include "track_protocol.h"
 #include "encoder_decode.h"
 #include "encoder_speed_window.h"
 #include "encoder_verification.h"
@@ -149,6 +150,74 @@ static void Test_TrackMath_FiveChannels(void)
     CHECK_NEAR(TrackMath_WeightedPosition(0x04U, weights, 5U), 0.0f, 0.0001f);
     CHECK_NEAR(TrackMath_WeightedPosition(0x03U, weights, 5U), -3.0f, 0.0001f);
     CHECK_NEAR(TrackMath_WeightedPosition(0x18U, weights, 5U), 3.0f, 0.0001f);
+}
+
+static void Test_TrackMath_TwelveChannelMask(void)
+{
+    const float weights[12] = {
+        -11.0f, -9.0f, -7.0f, -5.0f, -3.0f, -1.0f,
+          1.0f,  3.0f,  5.0f,  7.0f,  9.0f, 11.0f
+    };
+
+    /* bit11 必须保留，不能被旧 uint8_t 位图截断。 */
+    CHECK_NEAR(TrackMath_WeightedPosition(0x0800U, weights, 12U),
+               11.0f, 0.0001f);
+    CHECK_NEAR(TrackMath_WeightedPosition(0x0801U, weights, 12U),
+               0.0f, 0.0001f);
+    CHECK_NEAR(TrackMath_WeightedPosition(0x1000U, weights, 12U),
+               0.0f, 0.0001f);
+}
+
+static void Test_TrackProtocol_NormalAndReverseOrder(void)
+{
+    TrackProtocol_t parser;
+    uint16_t mask = 0U;
+    const uint8_t left[]  = {'#', '1', '0', '1', '0', '0', '1'};
+    const uint8_t right[] = {'!', '0', '1', '0', '1', '1', '0'};
+
+    TrackProtocol_Reset(&parser);
+    CHECK_TRUE(TrackProtocol_PushHalf(&parser, left, sizeof(left), &mask) ==
+               STATUS_BUSY);
+    CHECK_TRUE(TrackProtocol_PushHalf(&parser, right, sizeof(right), &mask) ==
+               STATUS_OK);
+    CHECK_TRUE(mask == 0x06A5U);
+
+    TrackProtocol_Reset(&parser);
+    mask = 0U;
+    CHECK_TRUE(TrackProtocol_PushHalf(&parser, right, sizeof(right), &mask) ==
+               STATUS_BUSY);
+    CHECK_TRUE(TrackProtocol_PushHalf(&parser, left, sizeof(left), &mask) ==
+               STATUS_OK);
+    CHECK_TRUE(mask == 0x06A5U);
+}
+
+static void Test_TrackProtocol_DuplicateAndInvalidHalves(void)
+{
+    TrackProtocol_t parser;
+    uint16_t mask = 0U;
+    const uint8_t leftOld[] = {'#', '1', '0', '0', '0', '0', '0'};
+    const uint8_t leftNew[] = {'#', '0', '1', '0', '0', '0', '0'};
+    const uint8_t right[]   = {'!', '0', '0', '0', '0', '0', '1'};
+    const uint8_t badHead[] = {'?', '1', '0', '0', '0', '0', '0'};
+    const uint8_t badData[] = {'#', '1', '0', 'X', '0', '0', '0'};
+
+    TrackProtocol_Reset(&parser);
+    CHECK_TRUE(TrackProtocol_PushHalf(&parser, leftOld, sizeof(leftOld), &mask) ==
+               STATUS_BUSY);
+    CHECK_TRUE(TrackProtocol_PushHalf(&parser, leftNew, sizeof(leftNew), &mask) ==
+               STATUS_BUSY);
+    CHECK_TRUE(TrackProtocol_PushHalf(&parser, right, sizeof(right), &mask) ==
+               STATUS_OK);
+    CHECK_TRUE(mask == 0x0802U);
+
+    CHECK_TRUE(TrackProtocol_PushHalf(&parser, badHead, sizeof(badHead), &mask) ==
+               STATUS_ERROR);
+    CHECK_TRUE(TrackProtocol_PushHalf(&parser, right, sizeof(right), &mask) ==
+               STATUS_BUSY);
+    CHECK_TRUE(TrackProtocol_PushHalf(&parser, badData, sizeof(badData), &mask) ==
+               STATUS_ERROR);
+    CHECK_TRUE(TrackProtocol_PushHalf(NULL, right, sizeof(right), &mask) ==
+               STATUS_INVALID_PARAM);
 }
 
 static void Test_Scheduler_SkipsMissedPeriods(void)
@@ -289,6 +358,9 @@ int main(void)
     Test_FrameProtocol_VariableLengthAndChecksum();
     Test_TrackMath_PositionAndLost();
     Test_TrackMath_FiveChannels();
+    Test_TrackMath_TwelveChannelMask();
+    Test_TrackProtocol_NormalAndReverseOrder();
+    Test_TrackProtocol_DuplicateAndInvalidHalves();
     Test_EncoderSpeedWindow_Fixed50MsAndAdaptive100Ms();
     Test_EncoderSpeedWindow_InvalidParameters();
     Test_EncoderDecode_X2RisingEdges();

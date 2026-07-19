@@ -93,18 +93,24 @@
 #define IMU_ONLINE_TIMEOUT_MS             200U
 
 /*
- * 亚博八路 MCU 灰度模块：I2C 地址/寄存器依据模块手册。
- * 当前 SDA/SCL 需要上拉到 3.3 V；禁止上拉到模块 5 V 电源。
+ * Path Fish 12 路带 MCU 灰度模块：每次直接读取 7 字节半帧，两个半帧
+ * 拼成 X1~X12。模块可用 5 V 供电，但 SDA/SCL 必须上拉到 3.3 V。
  */
-#define TRACK_CHANNEL_COUNT               8U
-#define TRACK_I2C_ADDRESS                 0x12U
-#define TRACK_I2C_STATUS_REGISTER         0x30U
+#define TRACK_CHANNEL_COUNT               12U
+#define TRACK_I2C_ADDRESS                 0x48U /* DriverLib 使用未左移的 7 位地址。 */
 #define TRACK_I2C_TIMEOUT_LOOPS           200000U
 #define I2C_RECOVERY_RETRY_COUNT           1U /* 超时/NACK 后复位控制器并重试一次。 */
-#define TRACK_BLACK_IS_HIGH               0
+#define TRACK_I2C_HALF_READS_PER_UPDATE    2U /* 一次更新最多读取 #、! 两个半帧。 */
+#define TRACK_I2C_STALE_UPDATE_LIMIT       4U /* 连续缺半帧超过此值才判通信失效。 */
+#define TRACK_BLACK_IS_HIGH                1 /* 若 TEST_TRACK 黑白相反，只改成 0。 */
 #define TRACK_ACTIVE_THRESHOLD            500U
 #define TRACK_SENSOR_REVERSED              0 /* 1：传感器左右安装方向与权重相反。 */
 #define TRACK_ALL_ACTIVE_IS_LINE           0 /* 0：全黑按停止/终点处理；1：继续循迹。 */
+
+#if (TRACK_I2C_HALF_READS_PER_UPDATE == 0U) || \
+    (TRACK_I2C_STALE_UPDATE_LIMIT == 0U)
+#error "Tracker half-frame read count and stale limit must be greater than zero"
+#endif
 
 /* ST7735S。若上板出现整体偏移，只微调 OFFSET；颜色方向异常再改 MADCTL。 */
 #define LCD_X_OFFSET                      2U

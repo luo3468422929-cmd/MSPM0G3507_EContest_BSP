@@ -1,49 +1,67 @@
 /**
  * @file track.c
- * @brief 实现亚博八路 I2C 数字循迹模块的位图映射、状态和加权误差。
+ * @brief 实现 Path Fish 12 路 I2C 循迹模块的半帧拼接、状态和位置误差。
  *
- * 所属层：Hardware 传感器层。I2C 失败会立即标记 communicationOk=false、
- * lineFound=false；控制层据此清 PID 并停车，不继续使用旧帧驱动电机。
+ * 所属层：Hardware 传感器层。模块一次 I2C 请求只返回 X1~X6 或 X7~X12
+ * 的 7 字节半帧，本文件把两半拼成统一位图。持续通信异常时立即把
+ * communicationOk/lineFound 清零，使控制层停车，不用旧帧继续驱动。
  */
 #include "track.h"
 
 #include <string.h>
 
 #include "i2c.h"
+#include "track_protocol.h"
 #include "user_config.h"
 
-/** 编译期锁定当前适配器只能在八路配置下使用。 */
-_Static_assert(TRACK_CHANNEL_COUNT == 8U,
-               "I2C eight-channel adapter requires TRACK_CHANNEL_COUNT == 8");
+_Static_assert(TRACK_CHANNEL_COUNT == 12U,
+               "Path Fish adapter requires TRACK_CHANNEL_COUNT == 12");
 
-/** X1~X8 从最左到最右的离散位置权重。 */
+/* X1~X12 从左到右映射到 -7~+7，保持原循迹位置环的误差量级。 */
 static const float g_trackWeights[TRACK_CHANNEL_COUNT] = {
-    -7.0f, -5.0f, -3.0f, -1.0f, 1.0f, 3.0f, 5.0f, 7.0f
+    -7.0000f, -5.7273f, -4.4545f, -3.1818f, -1.9091f, -0.6364f,
+     0.6364f,  1.9091f,  3.1818f,  4.4545f,  5.7273f,  7.0000f
 };
 
-/** 最近一帧对外数据，以及 Host 注入样本的一次性就绪标志。 */
 static Track_Data_t g_data;
+static TrackProtocol_t g_protocol;
 static bool g_externalSamplesReady;
+static bool g_hasCompleteFrame;
+static uint8_t g_incompleteUpdates;
 
-static void Track_ApplyModuleMask(uint8_t moduleMask)
+/** 把协议位图转换成项目统一的“bit0=X1 且 1=黑线”样本。 */
+static void Track_ApplyModuleMask(uint16_t moduleMask)
 {
-    /* 商家状态字节 bit7=X1、bit0=X8；先转成项目统一 bit0=最左。 */
-    for (uint8_t index = 0U; index < TRACK_CHANNEL_COUNT; ++index) {
-        uint8_t bit = (uint8_t)(7U - index);
+    for (uint8_t physicalIndex = 0U;
+         physicalIndex < TRACK_CHANNEL_COUNT; ++physicalIndex) {
         uint8_t logicalIndex = (TRACK_SENSOR_REVERSED != 0) ?
-                               (uint8_t)(7U - index) : index;
-        bool moduleBitHigh = (moduleMask & (uint8_t)(1U << bit)) != 0U;
-        /* 黑白电平和左右安装方向都只由配置宏修正。 */
+            (uint8_t)((TRACK_CHANNEL_COUNT - 1U) - physicalIndex) :
+            physicalIndex;
+        bool moduleBitHigh =
+            (moduleMask & (uint16_t)(1U << physicalIndex)) != 0U;
         bool onBlack = (TRACK_BLACK_IS_HIGH != 0) ?
-                       moduleBitHigh : !moduleBitHigh;
+            moduleBitHigh : !moduleBitHigh;
+
         g_data.raw[logicalIndex] = onBlack ? 1000U : 0U;
     }
+}
+
+/** 统一设置通信故障状态，防止控制层误用失效数据。 */
+static void Track_SetCommunicationFault(void)
+{
+    g_hasCompleteFrame = false;
+    g_data.communicationOk = false;
+    g_data.lineFound = false;
+    g_data.state = TRACK_STATE_LOST;
 }
 
 Status_t Track_Init(void)
 {
     (void)memset(&g_data, 0, sizeof(g_data));
+    TrackProtocol_Reset(&g_protocol);
     g_externalSamplesReady = false;
+    g_hasCompleteFrame = false;
+    g_incompleteUpdates = 0U;
 
     for (uint8_t index = 0U; index < TRACK_CHANNEL_COUNT; ++index) {
         g_data.minimum[index] = UINT16_MAX;
@@ -64,27 +82,67 @@ Status_t Track_SetRawSamples(const uint16_t *samples, uint8_t count)
     return STATUS_OK;
 }
 
+/**
+ * 从模块读取半帧。正常情况下连续两次请求分别得到 # 和 !；若模块暂时
+ * 重复同一半帧，则跨 Track_Update 保留已收到的一半，并短暂沿用上一完整帧。
+ */
 static Status_t Track_ReadModule(void)
 {
-    uint8_t moduleMask;
-    Status_t status = I2C_ReadRegister(TRACK_I2C_ADDRESS,
-                                       TRACK_I2C_STATUS_REGISTER,
-                                       &moduleMask, 1U);
-    if (status != STATUS_OK) {
-        /* 出错帧不保留“找到线”状态，确保上层采取安全停车。 */
+    uint8_t halfFrame[TRACK_PROTOCOL_HALF_FRAME_SIZE];
+    uint16_t completeMask = 0U;
+
+    for (uint8_t readIndex = 0U;
+         readIndex < TRACK_I2C_HALF_READS_PER_UPDATE; ++readIndex) {
+        Status_t status = I2C_Read(TRACK_I2C_ADDRESS, halfFrame,
+                                   TRACK_PROTOCOL_HALF_FRAME_SIZE);
+        if (status != STATUS_OK) {
+            TrackProtocol_Reset(&g_protocol);
+            g_incompleteUpdates = 0U;
+            Track_SetCommunicationFault();
+            return status;
+        }
+
+        status = TrackProtocol_PushHalf(&g_protocol, halfFrame,
+                                        sizeof(halfFrame), &completeMask);
+        if (status == STATUS_OK) {
+            Track_ApplyModuleMask(completeMask);
+            g_hasCompleteFrame = true;
+            g_incompleteUpdates = 0U;
+            g_data.communicationOk = true;
+            return STATUS_OK;
+        }
+        if (status != STATUS_BUSY) {
+            g_incompleteUpdates = 0U;
+            Track_SetCommunicationFault();
+            return status;
+        }
+    }
+
+    if (g_incompleteUpdates < UINT8_MAX) {
+        ++g_incompleteUpdates;
+    }
+    if (g_incompleteUpdates <= TRACK_I2C_STALE_UPDATE_LIMIT) {
+        if (g_hasCompleteFrame) {
+            /* 仅缺当前另一半时短暂沿用上一完整帧，避免正常交替边界误停车。 */
+            g_data.communicationOk = true;
+            return STATUS_OK;
+        }
+        /* 首次上电尚缺一半：保留协议缓存，但绝不把未完整数据交给控制层。 */
         g_data.communicationOk = false;
         g_data.lineFound = false;
         g_data.state = TRACK_STATE_LOST;
-        return status;
+        return STATUS_BUSY;
     }
-    Track_ApplyModuleMask(moduleMask);
-    g_data.communicationOk = true;
-    return STATUS_OK;
+
+    bool hadCompleteFrame = g_hasCompleteFrame;
+    TrackProtocol_Reset(&g_protocol);
+    Track_SetCommunicationFault();
+    return hadCompleteFrame ? STATUS_TIMEOUT : STATUS_BUSY;
 }
 
 Status_t Track_Update(void)
 {
-    uint8_t mask = 0U;
+    uint16_t mask = 0U;
     Status_t status;
 
     if (g_externalSamplesReady) {
@@ -101,7 +159,7 @@ Status_t Track_Update(void)
     for (uint8_t index = 0U; index < TRACK_CHANNEL_COUNT; ++index) {
         g_data.filtered[index] = g_data.raw[index];
         if (g_data.filtered[index] >= g_data.threshold[index]) {
-            mask |= (uint8_t)(1U << index);
+            mask |= (uint16_t)(1U << index);
         }
     }
 
@@ -109,12 +167,11 @@ Status_t Track_Update(void)
     if (mask == 0U) {
         g_data.lineFound = false;
         g_data.state = TRACK_STATE_LOST;
-        /* 丢线时保留上一次误差方向，便于控制层低速找线。 */
+        /* 丢线时保留上一次误差方向，控制层可据此实现低速找线。 */
     } else {
         g_data.positionError = TrackMath_WeightedPosition(
             mask, g_trackWeights, TRACK_CHANNEL_COUNT);
-        if (mask == 0xFFU) {
-            /* 全黑可代表终点/宽黑带，是否继续循迹由比赛策略宏决定。 */
+        if (mask == TRACK_PROTOCOL_FULL_MASK) {
             g_data.state = TRACK_STATE_ALL_ACTIVE;
             g_data.lineFound = (TRACK_ALL_ACTIVE_IS_LINE != 0);
         } else {
@@ -165,7 +222,6 @@ Status_t Track_CalibrationFinish(void)
             (g_data.maximum[index] <= g_data.minimum[index])) {
             return STATUS_ERROR;
         }
-        /* 每路独立取黑白观测中点，避免传感器个体差异。 */
         g_data.threshold[index] = (uint16_t)(g_data.minimum[index] +
             ((g_data.maximum[index] - g_data.minimum[index]) / 2U));
     }

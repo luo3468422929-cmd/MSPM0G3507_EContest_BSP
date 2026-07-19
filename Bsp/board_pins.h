@@ -44,7 +44,7 @@
 #define PIN_ENCODER_GPIOA_IRQn            GPIOA_INT_IRQn
 #define PIN_ENCODER_GPIOB_IRQn            GPIOB_INT_IRQn
 
-/* 调试 UART、惯导 UART 和八路循迹 I2C 的 SysConfig 实例。 */
+/* 调试 UART、惯导 UART 和 12 路循迹 I2C 的 SysConfig 实例。 */
 #define PIN_UART_DEBUG_INST               DEBUG_UART_INST
 #define PIN_UART_DEBUG_IRQn               DEBUG_UART_INST_INT_IRQN
 #define PIN_UART_IMU_INST                 IMU_UART_INST

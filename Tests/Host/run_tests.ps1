@@ -12,6 +12,7 @@ $sources = @(
     (Join-Path $project 'Hardware\imu_protocol.c')
     (Join-Path $project 'Bsp\frame_protocol.c')
     (Join-Path $project 'Hardware\track_math.c')
+    (Join-Path $project 'Hardware\track_protocol.c')
     (Join-Path $project 'Hardware\encoder_speed_window.c')
     (Join-Path $project 'Control\scheduler.c')
 )

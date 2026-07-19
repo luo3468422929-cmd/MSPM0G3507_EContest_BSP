@@ -1,6 +1,6 @@
 /**
  * @file i2c.h
- * @brief 提供带有限超时与可配置恢复重试的 I2C 寄存器读写接口。
+ * @brief 提供带有限超时与可配置恢复重试的 I2C 原始/寄存器读写接口。
  *
  * 所属层：Bsp 总线层。当前实例由 board_pins.h 映射到循迹 I2C0；具体
  * 设备地址和寄存器含义由 Hardware 层决定。重试次数由
@@ -10,6 +10,16 @@
 #define I2C_H
 
 #include "common.h"
+
+/**
+ * @brief 不发送寄存器地址，直接从 I2C 从机读取连续字节。
+ * @param address 7 位从设备地址，不要传入左移后的地址。
+ * @param data 接收缓冲区。
+ * @param length 读取字节数，不能为 0。
+ * @return STATUS_OK 表示完成；参数、总线或超时错误返回对应状态。
+ * @note Path Fish 12 路循迹模块使用此接口，每次直接返回 7 字节半帧。
+ */
+Status_t I2C_Read(uint8_t address, uint8_t *data, uint8_t length);
 
 /**
  * @brief 从 I2C 设备的寄存器读取连续字节。

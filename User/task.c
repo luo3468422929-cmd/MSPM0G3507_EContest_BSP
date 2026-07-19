@@ -129,8 +129,8 @@ static void Task_UpdateDisplayLine(uint32_t nowMs)
         {
             char text[22];
             const Track_Data_t *track = Track_GetData();
-            (void)snprintf(text, sizeof(text), "TRK %02X E %.1f",
-                           track->activeMask,
+            (void)snprintf(text, sizeof(text), "TRK %03X E %.1f",
+                           (unsigned int)track->activeMask,
                            (double)track->positionError);
             Task_ShowLine(16U, text);
         }

@@ -1,9 +1,9 @@
 /**
  * @file i2c.c
- * @brief 实现 I2C0 寄存器读写、有限轮询、控制器复位和有限重试。
+ * @brief 实现 I2C0 原始/寄存器读写、有限轮询、控制器复位和有限重试。
  *
- * 所属层：Bsp 总线层。当前用于八路循迹模块；地址和寄存器由 Hardware
- * 层传入。所有等待都有上限，通信失败会返回上层，由控制层执行停车策略。
+ * 所属层：Bsp 总线层。设备协议由 Hardware 层决定；所有等待都有上限，
+ * 通信失败会返回上层，由控制层执行停车策略。
  */
 #include "i2c.h"
 
@@ -59,6 +59,49 @@ static void I2C_RecoverController(I2C_Regs *instance)
     DL_I2C_resetControllerTransfer(instance);
     DL_I2C_flushControllerTXFIFO(instance);
     DL_I2C_flushControllerRXFIFO(instance);
+}
+
+static Status_t I2C_ReadOnce(I2C_Regs *instance, uint8_t address,
+                             uint8_t *data, uint8_t length)
+{
+    Status_t status = I2C_WaitIdle(instance);
+
+    if (status != STATUS_OK) {
+        return status;
+    }
+
+    /* 该设备没有寄存器地址阶段：清 RX FIFO 后直接发起读方向传输。 */
+    DL_I2C_flushControllerRXFIFO(instance);
+    DL_I2C_startControllerTransfer(instance, address,
+                                   DL_I2C_CONTROLLER_DIRECTION_RX, length);
+    for (uint8_t index = 0U; index < length; ++index) {
+        status = I2C_ReadOneByte(instance, &data[index]);
+        if (status != STATUS_OK) {
+            DL_I2C_flushControllerRXFIFO(instance);
+            return status;
+        }
+    }
+    return I2C_WaitIdle(instance);
+}
+
+Status_t I2C_Read(uint8_t address, uint8_t *data, uint8_t length)
+{
+    I2C_Regs *instance = PIN_TRACK_I2C_INST;
+    Status_t status = STATUS_ERROR;
+
+    if (!I2C_AddressIsValid(address) || (data == NULL) || (length == 0U)) {
+        return STATUS_INVALID_PARAM;
+    }
+
+    for (uint8_t attempt = 0U; attempt <= I2C_RECOVERY_RETRY_COUNT;
+         ++attempt) {
+        status = I2C_ReadOnce(instance, address, data, length);
+        if (status == STATUS_OK) {
+            return STATUS_OK;
+        }
+        I2C_RecoverController(instance);
+    }
+    return status;
 }
 
 static Status_t I2C_ReadRegisterOnce(I2C_Regs *instance, uint8_t address,

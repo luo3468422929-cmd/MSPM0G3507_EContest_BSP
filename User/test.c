@@ -141,13 +141,21 @@ static void Test_RunTrack(uint32_t nowMs)
 {
     /* 100 ms 读取/打印一次，移动模块时仍足够直观且不会淹没串口。 */
     const Track_Data_t *data;
+    char bits[TRACK_CHANNEL_COUNT + 1U];
     if ((uint32_t)(nowMs - g_lastTickMs) < 100U) { return; }
     g_lastTickMs = nowMs;
     (void)Track_Update();
     data = Track_GetData();
-    (void)UART_Printf("TRACK mask=%02X error=%.2f i2c=%s\r\n",
-        data->activeMask, (double)data->positionError,
-        data->communicationOk ? "OK" : "ERR");
+    /* bits[0]~bits[11] 固定按 X1~X12，从车体左侧向右侧显示。 */
+    for (uint8_t index = 0U; index < TRACK_CHANNEL_COUNT; ++index) {
+        bits[index] = ((data->activeMask & (uint16_t)(1U << index)) != 0U) ?
+            '1' : '0';
+    }
+    bits[TRACK_CHANNEL_COUNT] = '\0';
+    (void)UART_Printf(
+        "TRACK mask=%03X error=%.2f i2c=%s bits=%s\r\n",
+        (unsigned int)data->activeMask, (double)data->positionError,
+        data->communicationOk ? "OK" : "ERR", bits);
 }
 
 static void Test_RunMotor(uint32_t nowMs)
