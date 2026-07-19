@@ -16,7 +16,7 @@ typedef enum {
     TEST_NONE = 0, /**< 不运行测试，进入正常小车状态机。 */
     TEST_LED,      /**< 板载 LED 500 ms 翻转。 */
     TEST_KEY,      /**< 按键事件通过调试 UART 输出。 */
-    TEST_TRACK,    /**< 八路循迹 mask/误差/I2C 状态输出。 */
+    TEST_TRACK,    /**< 12 路循迹 mask/误差/I2C 状态输出。 */
     TEST_MOTOR,    /**< 双轮开环正停反及编码器遥测，必须架空。 */
     TEST_PID,      /**< 双轮固定目标 RPM 闭环及 VOFA 遥测。 */
     TEST_ENCODER,  /**< 手转测速和输出轴多圈 CPR 校验。 */

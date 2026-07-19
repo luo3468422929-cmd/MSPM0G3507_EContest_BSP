@@ -96,7 +96,7 @@ Hardware：
 
 - TB6612 电机
 - 编码器
-- 亚博八路循迹模块
+- Path Fish 12 路 I2C 循迹模块
 - ST7735S LCD
 - NCU 惯导串口接收
 - 按键
@@ -154,7 +154,7 @@ LCD：
 
 循迹：
 
-- 当前使用亚博八路带 MCU 灰度模块；
+- 当前使用 Path Fish 12 路带 MCU 灰度模块；
 - 通过 I2C 通信；
 - 黑白校准后才能正常获得有效数据；
 - 不要把它当成普通 GPIO ADC 五路模块；
@@ -242,7 +242,7 @@ NCU 惯导：
 - 编码器中断；
 - 电机方向和缓升；
 - PID 测试模式；
-- 八路循迹 I2C；
+- 12 路循迹 I2C；
 - LCD 接口；
 - 惯导显示；
 - 用户层 API；
@@ -375,7 +375,7 @@ https://github.com/luo3468422929-cmd/MSPM0G3507_EContest_BSP
 平台是 MSPM0G3507 LQFP-48 + TI DriverLib + SysConfig。
 项目分层为 Bsp、Hardware、Control、User。
 LCD 是 ST7735S SPI，BL 直连 3.3 V，PA24 不使用。
-循迹是亚博八路 MCU I2C 模块。
+循迹是 Path Fish 12 路 MCU I2C 模块，地址 0x48，PA28/PA31。
 电机是 TB6612。
 编码器是 GPIO A/B 两相 x2 解码。
 NCU 惯导通过 UART 接收。

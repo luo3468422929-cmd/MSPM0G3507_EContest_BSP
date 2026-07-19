@@ -43,19 +43,19 @@ Status_t TrackMath_Calculate(const uint16_t *values,
     return STATUS_OK;
 }
 
-float TrackMath_WeightedPosition(uint8_t activeMask,
+float TrackMath_WeightedPosition(uint16_t activeMask,
                                  const float *weights,
                                  uint8_t count)
 {
     float sum = 0.0f;
     uint8_t active = 0U;
 
-    if ((weights == NULL) || (count == 0U) || (count > 8U)) {
+    if ((weights == NULL) || (count == 0U) || (count > 12U)) {
         return 0.0f;
     }
     /* 数字位图中每个触发通道权重相同，因此取触发权重的算术平均。 */
     for (uint8_t index = 0U; index < count; ++index) {
-        if ((activeMask & (uint8_t)(1U << index)) != 0U) {
+        if ((activeMask & (uint16_t)(1U << index)) != 0U) {
             sum += weights[index];
             active++;
         }
